@@ -51,17 +51,20 @@ if __name__ == '__main__':
     dir_path = 'Htmls/AllItems.csv'
     if os.path.exists(dir_path):
         os.remove(dir_path)
-    shutil.copy('AllItems.csv', 'Htmls/AllItems.csv')
+    shutil.copy('AllItems.csv', dir_path)
 
     # 先写入文件头部4行信息
     item_file1 = open('Htmls/AllItems.csv', 'r')
     item_reader = csv.reader(item_file1)
+    dir_path = 'AllItems.csv'
+    if os.path.exists(dir_path):
+        os.remove(dir_path)
     item_file2 = open('AllItems.csv', 'w', newline='')
     item_writer = csv.writer(item_file2, dialect='excel')
     i = 0
     for row in item_reader:
         item_writer.writerow(row)
-        ++i
+        i = i + 1
         if i == 4:
             break
     item_file1.close()
