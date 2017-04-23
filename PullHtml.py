@@ -3,13 +3,12 @@
 
 # 1 ----------------模块导入
 import xlrd
-from Utils import println
 
 
 # 2 ----------------返回html list
 def pullHtml():
     xlsx_file = xlrd.open_workbook('Htmls/Htmls.xlsx')
-    table = xlsx_file.sheet_by_name('Amazon')
+    table = xlsx_file.sheet_by_name('Htmls')
     html_list = table.col_values(0)
 
     return html_list

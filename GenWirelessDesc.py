@@ -76,10 +76,9 @@ def genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, commen
     # 商家末尾图片
     description += addEnter(img.replace(img_reg, image_end))
 
-    description += addEnter(wap_end)
+    description += wap_end
 
     return description
-
 
 # 4.1 方法测试
 # genWirelessDesc("", None, None, None, None, None)
