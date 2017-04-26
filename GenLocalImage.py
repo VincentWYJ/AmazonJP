@@ -2,6 +2,7 @@
 
 
 # 1 ----------------模块导入
+import os
 import sys
 from  PIL import Image
 import urllib.request
@@ -34,20 +35,21 @@ def genLocalImage(imageLink, image_format):
     if '"' in formated_imageLink:
         formated_imageLink = formated_imageLink[0, formated_imageLink.find('"')] + "'"
 
-    try:
-        urllib.request.urlretrieve(formated_imageLink, return_name_temp)
-    except:
-        urllib.request.urlretrieve(imageLink, return_name_temp)
+    if not os.path.exists(return_name):
+        try:
+            urllib.request.urlretrieve(formated_imageLink, return_name_temp)
+        except:
+            urllib.request.urlretrieve(imageLink, return_name_temp)
 
-    try:
-        imageopened = Image.open(return_name_temp)
-        x,y = imageopened.size
-        x_s = image_format
-        y_s = int((y / x) * image_format)
-        imagesaved = imageopened.resize((x_s, y_s))
-        imagesaved.save(return_name)
-    except IOError:
-        println(u'图片处理模块文件IO错误')
+        try:
+            imageopened = Image.open(return_name_temp)
+            x,y = imageopened.size
+            x_s = image_format
+            y_s = int((y / x) * image_format)
+            imagesaved = imageopened.resize((x_s, y_s))
+            imagesaved.save(return_name)
+        except:
+            println(u'图片处理模块文件错误')
 
     return return_name
 

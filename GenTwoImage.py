@@ -2,6 +2,7 @@
 
 
 # 1 ----------------模块导入
+import os
 import urllib.request
 
 
@@ -14,7 +15,8 @@ name = ['Static_images/image_start.jpg', 'Static_images/image_end.jpg']
 # 3 ----------------生成tbi格式图片
 def genTwoImage():
     for i in list(range(len(image_list))):
-        urllib.request.urlretrieve(image_list[i], name[i])
+        if not os.path.exists(name[i]):
+            urllib.request.urlretrieve(image_list[i], name[i])
 
 # 3.1 ----------------方法测试
 # genTwoImage()

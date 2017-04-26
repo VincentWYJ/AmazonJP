@@ -2,6 +2,7 @@
 
 
 # 1 ----------------模块导入
+import os
 import urllib.request
 
 
@@ -20,7 +21,10 @@ def genImage(imageLink_list, asin_number):
             name = start_name + asin_number + '0' + str(i) + format
         else:
             name = start_name + asin_number + str(i) + format
-        urllib.request.urlretrieve(link, name)
+
+        if not os.path.exists(name):
+            urllib.request.urlretrieve(link, name)
+
         i += 1
 
 # 2.3 ----------------方法测试

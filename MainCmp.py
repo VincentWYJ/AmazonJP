@@ -31,21 +31,21 @@ def startMutilThread():
         thread.setDaemon(True)
         thread.start()
         time.sleep(20)
-    thread.join()
+        thread.join()
 
 
 # 4 ----------------初始化方法
 if __name__ == '__main__':
     # 重置下载图片目录
-    dir_path = 'Item_images'
-    if os.path.exists(dir_path):
-        shutil.rmtree(dir_path)
-    os.mkdir(dir_path)
-
-    dir_path = 'Temp_images'
-    if os.path.exists(dir_path):
-        shutil.rmtree(dir_path)
-    os.mkdir(dir_path)
+    # dir_path = 'Item_images'
+    # if os.path.exists(dir_path):
+    #     shutil.rmtree(dir_path)
+    # os.mkdir(dir_path)
+    #
+    # dir_path = 'Temp_images'
+    # if os.path.exists(dir_path):
+    #     shutil.rmtree(dir_path)
+    # os.mkdir(dir_path)
 
     # 迭代AllItems.csv文件
     dir_path = 'Htmls/AllItems.csv'
