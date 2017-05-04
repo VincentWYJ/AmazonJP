@@ -36,14 +36,15 @@ def startMutilThread():
 # 4 ----------------初始化方法
 if __name__ == '__main__':
     # 重置下载图片目录
-    dir_path = 'Item_images'
-    if os.path.exists(dir_path):
-        shutil.rmtree(dir_path)
-    os.mkdir(dir_path)
-    dir_path = 'Temp_images'
-    if os.path.exists(dir_path):
-        shutil.rmtree(dir_path)
-    os.mkdir(dir_path)
+    # dir_path = 'Item_images'
+    # if os.path.exists(dir_path):
+    #     shutil.rmtree(dir_path)
+    # os.mkdir(dir_path)
+    #
+    # dir_path = 'Temp_images'
+    # if os.path.exists(dir_path):
+    #     shutil.rmtree(dir_path)
+    # os.mkdir(dir_path)
 
     # 开启多线程获取网页信息
     startMutilThread()
