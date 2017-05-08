@@ -30,7 +30,7 @@ def startMutilThread():
         thread.setDaemon(True)
         thread.start()
         time.sleep(20)
-    thread.join()
+        thread.join()
 
 
 # 4 ----------------初始化方法
