@@ -5,6 +5,13 @@
 import re
 import urllib.parse, urllib.request
 from HandleJs import Py4Js
+import hashlib
+import urllib
+import random
+import json
+
+appid = '20170525000049178'
+secretKey = 'CJ3amNC3iyx4pR3AnmZs'
 
 
 js = Py4Js()
@@ -19,7 +26,7 @@ def open_url(url):
 
 
 # 2----------------翻译方法
-def translate(content, f='ja', t='zh-cn'):
+def translate1(content, f='ja', t='zh-cn'):
     if len(content) > 4891:
         print('Content is too long.')
         return
@@ -39,6 +46,28 @@ def translate(content, f='ja', t='zh-cn'):
         return result[4:end]
     else:
         return ''
+
+def translate(q):
+    # http://api.fanyi.baidu.com/api/trans/product/index
+    appid = '20170525000049178' # 百度API的 APPid
+    secretKey = 'CJ3amNC3iyx4pR3AnmZs'# 百度API的 secretKey
+    myurl = 'http://api.fanyi.baidu.com/api/trans/vip/translate'
+    fromLang = 'jp'
+    toLang = 'zh'
+    salt = random.randint(32768, 65536)
+    sign = appid + q + str(salt) + secretKey
+    sign = hashlib.md5(sign.encode()).hexdigest()
+    myurl = myurl + '?appid=' + appid + '&q=' + urllib.parse.quote(q) + '&from=' + fromLang + '&to=' + toLang + '&salt=' + str(salt) + '&sign=' + sign
+    try:
+        # response是HTTPResponse对象
+        resultPage = urllib.request.urlopen(myurl)
+        resultJason = resultPage.read().decode('utf-8')  # 取得翻译的结果，翻译的结果是json格式
+        jsdata = json.loads(resultJason)  # 将json格式的结果转换成Python的字典结构
+        tranlate_result = str(jsdata["trans_result"][0]["dst"])  # 取得翻译后的文本结果
+    except Exception as e:
+        print
+        e
+    return tranlate_result
 
 # 2.1 方法测试
 # content = input('输入待翻译内容：')
@@ -72,3 +101,13 @@ def println(text):
 
 # 3.1 方法测试
 # println('Hello')
+
+
+# /usr/bin/env python
+# coding=utf8
+
+
+
+
+
+

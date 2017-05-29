@@ -123,6 +123,7 @@ def pullData(html_url):
         detail_label_list = []
         detail_value_list = []
         detail_node = bs_obj.find('', {'id': 'prodDetails'})
+        detail_bullets_node = bs_obj.find('', {'id': 'detail_bullets_id'})
         if detail_node and len(detail_node) > 0:
             for label_text in detail_node.find_all('td', {'class': 'label'}):
                 if label_text != '\n':
@@ -132,9 +133,11 @@ def pullData(html_url):
                 if value_text != '\n':
                     value = translate(value_text.get_text().strip().replace('\n', ''))
                     detail_value_list.append(value)
-        print(u'detail_dict--商品详细: ')
-        print(detail_label_list)
-        println(detail_value_list)
+        elif detail_bullets_node and len(detail_bullets_node) >0:
+
+            print(u'detail_dict--商品详细: ')
+            print(detail_label_list)
+            println(detail_value_list)
 
         # 价格计算
         weight_temp = str('1000000克')
