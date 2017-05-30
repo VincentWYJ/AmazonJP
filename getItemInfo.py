@@ -2,7 +2,6 @@
 
 
 # 模块导入
-import time
 import threading
 import http.cookiejar
 from bs4 import BeautifulSoup
