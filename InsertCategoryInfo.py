@@ -2,7 +2,7 @@
 
 
 # 模块导入
-import threading
+import pymysql
 import http.cookiejar
 from bs4 import BeautifulSoup
 import urllib.request, urllib.parse, urllib.error
@@ -64,6 +64,7 @@ def getFiveTypeInfo(url_arg):
                 info.append(url)
                 info.append(base_id)
                 print(info)
+                insertCategoryInfo(info)
                 id += 1
                 info_list.append(info)
                 url_list.append(url)
@@ -110,6 +111,7 @@ def getCategoryInfo(info_list_arg, url_list_arg):
                     info.append(url)
                     info.append(base_id)
                     print(info)
+                    insertCategoryInfo(info)
                     id += 1
                     info_list.append(info)
                     url_list.append(url)
@@ -118,6 +120,25 @@ def getCategoryInfo(info_list_arg, url_list_arg):
                     getCategoryInfo(info_list, url_list)
 
 
+# 添加分类信息到数据库
+def insertCategoryInfo(info):
+    insert_code = 'insert into category values(%s, %s, %s, %s)'
+    cur.execute(insert_code, (info[0], info[1], info[2], info[3]))
+    conn.commit()
+
+
+# 连接数据库
+conn = pymysql.connect(host='amazondata.mysql.rds.aliyuncs.com', user='root', passwd='1qaz2wsx@12',
+                       db='amazondata', port=3306, charset='utf8')
+cur = conn.cursor()
+cur.execute("delete from category")
+
+
 # getFiveTypeInfo方法测试
 getFiveTypeInfo(url)
 # getCategoryInfo([[0, '', 'https://www.amazon.co.jp/gp/bestsellers/mobile-apps/2386858051', 3]], [])
+
+
+# 断开数据库
+cur.close()
+conn.close()
