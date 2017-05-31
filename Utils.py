@@ -19,7 +19,7 @@ js = Py4Js()
 
 def open_url(url):
     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 Firefox/23.0'}
-    req = urllib.request.Request(url = url,headers=headers)
+    req = urllib.request.Request(url = url, headers=headers)
     response = urllib.request.urlopen(req)
     data = response.read().decode('utf-8')
     return data
