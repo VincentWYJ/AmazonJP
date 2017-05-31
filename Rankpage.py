@@ -10,6 +10,8 @@ from Utils import *
 import datetime
 import os
 import sys
+import numpy
+import Levenshtein
 
 # 2 ----------------常量定义
 # 汇率(API)
@@ -38,7 +40,7 @@ reg_replace = re.compile('\n|\'|[|]|【|】')
 # 通过图片获取淘宝竞争品的信息
 def get_taobao_data(amazon_picture_name):
     i = 0
-    taobao_output_data =[]
+    taobao_output_data =[[]]
     driver = webdriver.Firefox()
     try:
         driver.get('https://www.taobao.com/')
@@ -58,18 +60,27 @@ def get_taobao_data(amazon_picture_name):
     bs_obj = BeautifulSoup(get_html,'html.parser')
     target_div_node = bs_obj.find('div', {'class': 'items g-clearfix'})
     if target_div_node and len(target_div_node) > 0:
+        number = 0
         for items_div in target_div_node.find_all('div', {'class': r'row row-2 title'}): #获取名称
             item_name = items_div.get_text().strip()
-            taobao_output_data.append(item_name)
+            taobao_output_data[number][0].append(item_name)
+            number = number + 1
             print (item_name)
+
+        number = 0
         for items_div in target_div_node.find_all('div', {'class': 'price g_price g_price-highlight'}): #获取价格
             item_price = items_div.get_text().strip()
-            taobao_output_data.append(item_price)
+            taobao_output_data[number][1].append(item_price)
+            number = number + 1
             print(item_price)
+
+        number = 0
         for items_div in target_div_node.find_all('div', {'class': 'deal-cnt'}): #获取销量
             item_account = items_div.get_text().strip()
-            taobao_output_data.append(item_account)
+            taobao_output_data[number][2].append(item_account)
+            number = number + 1
             print(item_account)
+
         print(taobao_output_data)
     return taobao_output_data
 
@@ -109,7 +120,7 @@ def pull_amazon_Data(asin):
         star_number = ''
         star_number_node = bs_obj.find('span', {'id': 'acrPopover'})
         if star_number_node and len(star_number_node) > 0:
-            star_number = translate(star_number_node.title.get_text().strip().replace('\'', ''))
+            star_number = star_number_node.title.get_text().strip().replace('\'', '')
 
         # 1
         product_info_list.append(star_number)
@@ -119,7 +130,7 @@ def pull_amazon_Data(asin):
         reviewer_number = ''
         reviewer_number_node = bs_obj.find('span', {'id': 'acrCustomerReviewText'})
         if reviewer_number_node and len(reviewer_number_node) > 0:
-            reviewer_number = translate(reviewer_number_node.get_text().strip().replace('\'', ''))
+            reviewer_number = reviewer_number_node.get_text().strip().replace('\'', '')
 
         # 2
         product_info_list.append(reviewer_number)
@@ -128,7 +139,7 @@ def pull_amazon_Data(asin):
         answer_number = ''
         answer_number_node = bs_obj.find('a', {'id': 'askATFLink'})
         if answer_number_node and len(answer_number_node) > 0:
-            answer_number = translate(answer_number_node.get_text().strip().replace('\'', ''))
+            answer_number = answer_number_node.get_text().strip().replace('\'', '')
 
         # 3
         product_info_list.append(answer_number)
@@ -194,12 +205,11 @@ def pull_amazon_Data(asin):
         # 发布时间
         release_time = ''
         now_days = datetime.datetime.now("%Y-%m-%d")
+        sale_days = 0
         for i in range(len(detail_label_list)):
             if re.search(r".*Amazon.*", detail_label_list[i]) != None:
                 release_day = datetime.datetime.strptime(detail_value_list[i], "%Y-%m-%d").date()
                 sale_days = (now_days - release_day).days
-                break
-
         # 5
         product_info_list.append(sale_days)
         println(u'发布时间: %s' % sale_days)
@@ -325,17 +335,83 @@ def pull_amazon_Data(asin):
         # 返回获取的数据结果
         return product_info_list
 
-def ranking(asin):
+def similar_ratio(str1, str2):
+    similar_index = Levenshtein.jaro(str1, str2)
+    return similar_index
+
+
+def ranking(asin,ranknumber,category):
     rank_value = 0
     asin_info = []
-    tb_info = []
+    tb_info = [[]]
+
     asin_info = pull_amazon_Data(asin)
     time.sleep(3)
     tb_info = get_taobao_data(asin_info[8])
 
-    if len(tb_info)%3 == 0 :
-        i = len(tb_info)/3
-        tb_info
+#   删除文件
+    if tb_info and len(tb_info) > 0:
+        try:
+            os.remove(asin_info[8])
+        except Exception as e:
+            print(e)
+
+# 把字符串等数据处理成为数值
+
+    amazon_title = str(asin_info[0]) + str(asin_info[6])
+    amazon_star_number = int(re.sub("\D", "", asin_info[1]))
+    amazon_revi_number = int(re.sub("\D", "", asin_info[2]))
+    amazon_price = int(asin_info[4])
+    amazon_days = int(asin_info[5])
+    amazon_availability = int(asin_info[7])
+    amazon_picture_number = int(asin_info[8])
+    amazon_item_weight = int(asin_info[9])
+    amazon_ranknum = ranknumber
+    amazon_catagory = category
+
+#---------初步筛选数据----------------
+    # 剪除名称不相关的数据
+    for i in range(len(tb_info)):
+        if similar_ratio(amazon_title,tb_info[i][0]) < 0.3:
+            tb_info.remove(i)
+
+    # 剪除价格明显问题的数据
+    for i in range(len(tb_info)):
+        if tb_info[i][2] < (0.6)*amazon_price:
+            tb_info.remove(i)
+
+# ---------根据统计学筛选数据----------------
+    price_sum1 = 0.0
+    price_sum2 = 0.0
+    volume_sum1 = 0.0
+    volume_sum2 = 0.0
+    for i in range(len(tb_info)):
+        price_sum1 += tb_info[i][2]
+        volume_sum1 += tb_info[i][1]
+        price_sum2 += tb_info[i][2] ** 2
+        volume_sum2 += tb_info[i][1] ** 2
+    price_mean = sum1 /len(tb_info)
+    price_var = sum2 / len(tb_info) - price_mean ** 2
+    volume_mean = volume_sum1 /len(tb_info)
+    volume_var = volume_sum2 / len(tb_info) - volume_mean ** 2
+
+    # 按照销量从高到低排序
+    tb_info_sorted = sorted(tb_info,key=lambda x:x[1],reverse=True)
+
+    # 计算取前几名
+    j = 8
+    for i in range(len(tb_info_sorted)):
+        if volume_var/i < 2
+            j -= 1
+
+# 销量方差越大，取平均的数量就越少，销量方差大于5，取平均前3名？
+# 销量前三名的平均价格作为该产品价格
+
+    # 根据偏离平均值的程度和方差，进一步剪除价格有问题的数据，
+    sum_price = 0
+    for i in range(j):
+        sum_price += tb_info_sorted[i][2]
+    mean_price = int(sum_price/j)
 
 
 
