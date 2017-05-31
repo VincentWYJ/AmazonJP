@@ -23,7 +23,7 @@ opener = urllib.request.build_opener(handler)
 
 # 正则表达式
 nav_tag = '_nav_'
-delete_tag = re.compile('/ref=zg_bs_.*')
+delete_tag = re.compile('/ref=zg_.*')
 
 
 # 全局变量
@@ -56,7 +56,7 @@ def getFiveTypeInfo(url_arg):
             url_list = []
             for item in node.find_all('a'):
                 info = []
-                name = translate(item.get_text().strip())
+                name = translate1(item.get_text().strip())
                 url = item.get('href').strip()
                 url = delete_tag.sub('', url)
                 info.append(id)
@@ -76,6 +76,8 @@ def getFiveTypeInfo(url_arg):
 # 获取某个类型下的分类信息
 # 数据库中存储内容：id，name，url，base_id
 def getCategoryInfo(info_list_arg, url_list_arg):
+    info_list = []
+    url_list = []
     for info in info_list_arg:
         try:
             request = urllib.request.Request(info[2], postdata, headers)
@@ -95,8 +97,6 @@ def getCategoryInfo(info_list_arg, url_list_arg):
             if node and len(node) > 0:
                 global id
                 base_id = info[0]
-                info_list = []
-                url_list = []
                 for item in node.find_all('a'):
                     url = item.get('href').strip()
                     if nav_tag not in url:
@@ -105,7 +105,7 @@ def getCategoryInfo(info_list_arg, url_list_arg):
                     if url in url_list_arg:
                         continue
                     info = []
-                    name = translate(item.get_text().strip())
+                    name = translate1(item.get_text().strip())
                     info.append(id)
                     info.append(name)
                     info.append(url)
@@ -116,8 +116,8 @@ def getCategoryInfo(info_list_arg, url_list_arg):
                     info_list.append(info)
                     url_list.append(url)
 
-                if len(info_list) > 0:
-                    getCategoryInfo(info_list, url_list)
+    if len(info_list) > 0:
+        getCategoryInfo(info_list, url_list)
 
 
 # 添加分类信息到数据库
