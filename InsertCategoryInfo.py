@@ -22,18 +22,19 @@ opener = urllib.request.build_opener(handler)
 
 
 # 正则表达式
-nav_tag = '_nav_'
-delete_tag = re.compile('/ref=zg_.*')
+nav_tag_g = '_nav_'
+delete_tag_g = re.compile('/ref=zg_.*')
 
 
 # 全局变量
-id = 1
-url = 'https://www.amazon.co.jp/gp/bestsellers/'
+id_g = 1
+url_g = 'https://www.amazon.co.jp/gp/bestsellers/'
 
 
 # 获取5个类型信息：畅销，新品，人气，心愿，礼物
 # 数据库中存储内容：id，name，url，base_id
 def getFiveTypeInfo(url_arg):
+    global id_g
     try:
         request = urllib.request.Request(url_arg, postdata, headers)
         response = opener.open(request)
@@ -50,22 +51,22 @@ def getFiveTypeInfo(url_arg):
 
         node = bs_obj.find('', {'id': 'zg_tabs'})
         if node and len(node) > 0:
-            global id
             base_id = 0
             info_list = []
             url_list = []
             for item in node.find_all('a'):
                 info = []
-                name = translate1(item.get_text().strip())
+                # name = translate1(item.get_text().strip())
+                name = item.get_text().strip()
                 url = item.get('href').strip()
-                url = delete_tag.sub('', url)
-                info.append(id)
+                url = delete_tag_g.sub('', url)
+                info.append(id_g)
                 info.append(name)
                 info.append(url)
                 info.append(base_id)
                 print(info)
                 insertCategoryInfo(info)
-                id += 1
+                id_g += 1
                 info_list.append(info)
                 url_list.append(url)
 
@@ -76,6 +77,7 @@ def getFiveTypeInfo(url_arg):
 # 获取某个类型下的分类信息
 # 数据库中存储内容：id，name，url，base_id
 def getCategoryInfo(info_list_arg, url_list_arg):
+    global id_g
     info_list = []
     url_list = []
     for info in info_list_arg:
@@ -95,24 +97,24 @@ def getCategoryInfo(info_list_arg, url_list_arg):
 
             node = bs_obj.find('', {'id': 'zg_browseRoot'})
             if node and len(node) > 0:
-                global id
                 base_id = info[0]
                 for item in node.find_all('a'):
                     url = item.get('href').strip()
-                    if nav_tag not in url:
+                    if nav_tag_g not in url:
                         continue
-                    url = delete_tag.sub('', url)
+                    url = delete_tag_g.sub('', url)
                     if url in url_list_arg:
                         continue
                     info = []
-                    name = translate1(item.get_text().strip())
-                    info.append(id)
+                    # name = translate1(item.get_text().strip())
+                    name = item.get_text().strip()
+                    info.append(id_g)
                     info.append(name)
                     info.append(url)
                     info.append(base_id)
                     print(info)
                     insertCategoryInfo(info)
-                    id += 1
+                    id_g += 1
                     info_list.append(info)
                     url_list.append(url)
 
@@ -131,11 +133,14 @@ def insertCategoryInfo(info):
 conn = pymysql.connect(host='amazondata.mysql.rds.aliyuncs.com', user='root', passwd='1qaz2wsx@12',
                        db='amazondata', port=3306, charset='utf8')
 cur = conn.cursor()
+
+
 cur.execute("delete from category")
+conn.commit()
 
 
 # getFiveTypeInfo方法测试
-getFiveTypeInfo(url)
+getFiveTypeInfo(url_g)
 # getCategoryInfo([[0, '', 'https://www.amazon.co.jp/gp/bestsellers/mobile-apps/2386858051', 3]], [])
 
 

@@ -12,7 +12,7 @@ def queryCategoryInfo():
                              db='amazondata', port=3306, charset='utf8')
         cur = conn.cursor()
 
-        cur.execute('select * from category')
+        cur.execute('select * from top100')
         conn.commit()
 
         data = cur.fetchall()
