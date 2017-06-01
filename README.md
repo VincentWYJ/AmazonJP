@@ -38,6 +38,26 @@ Item_images、Temp_images--图片生成文件夹；
 
 1、修改了翻译方法，依然采用Google翻译，虽然还是有点慢但是不会卡住，发现是无限详情这一栏内容太多导致；
 
+2017.06.01
+
+1、InsertCategoryInfo.py
+
+获取分类信息，写入category表；
+
+2、InsertItemInfo.py
+
+对应某个分类，获取top100条目，写入top100表；
+
+3、QueryCategoryInfo.py
+
+查询分类信息；
+
+4、QueryItemInfo.py
+
+查询top100信息；
+
+目前写入的内容没有翻译，且写入前均会将上一次内容清空。
+
 
 (注：以后对项目进行的迭代，尽量在此文件中进行概述，格式如下：
 

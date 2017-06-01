@@ -2,7 +2,7 @@
 
 
 # 模块导入
-import threading
+import pymysql
 import http.cookiejar
 from bs4 import BeautifulSoup
 import urllib.request, urllib.parse, urllib.error
@@ -21,17 +21,17 @@ handler = urllib.request.HTTPCookieProcessor(cookie)
 opener = urllib.request.build_opener(handler)
 
 
-# 正则表达式
-reg_id = re.compile('zg_critical|zg_nonCritical')
+# 全局变量
+asin_filter_g = '/dp/'
+id_g = 1
 
-
-# 类别网址获取
-def getHtmlUrlList(html_url):
+# 获取某类别下Top 100 items
+def getTop100Items(info_arg):
     try:
-        request = urllib.request.Request(html_url, postdata, headers)
+        request = urllib.request.Request(info_arg[2], postdata, headers)
         response = opener.open(request)
     except:
-        print(html_url + ' open failed.')
+        print(info_arg[2] + ' open failed.')
     else:
         cookie.save(ignore_discard=True, ignore_expires=True)
 
@@ -41,110 +41,114 @@ def getHtmlUrlList(html_url):
         for script in bs_obj(['script', 'style']):
             script.extract()
 
-        node = bs_obj.find('', {'id': 'zg_browseRoot'})
-        if node and len(node) > 0:
-            name_list = []
-            link_list = []
-            for item in node.find_all('a'):
-                if item != '\n':
-                    name = translate(item.get_text().strip().replace('\n', ''))
-                    name_list.append(name)
-                    link = item.get('href').strip().replace('\n', '')
-                    link = link[:link.rfind("/")]
-                    link_list.append(link)
-            print("name_list len: " + str(len(name_list)))
-            print(name_list)
-            print("link_list len: " + str(len(link_list)))
-            print(link_list)
-
-            return link_list
-
-
-# 每个类别开启新线程获取Top100
-def startMutilThread(link_list):
-    thread_list = []
-    for html_url in link_list:
-        thread_list.append(threading.Thread(target=getTop100Items, args=(html_url,)))
-    for thread in thread_list:
-        thread.setDaemon(True)
-        thread.start()
-        thread.join()
-
-
-# 获取某类别下Top 100 items
-def getTop100Items(html_url):
-    try:
-        request = urllib.request.Request(html_url, postdata, headers)
-        html_file = opener.open(request)
-    except:
-        print(html_url + ' open failed.')
-    else:
-        cookie.save(ignore_discard=True, ignore_expires=True)
-
-        bs_obj = BeautifulSoup(html_file.read(), 'html.parser')
-
-        # 排除script脚本
-        for script in bs_obj(['script', 'style']):
-            script.extract()
-
-        print(html_url + ":")
         node = bs_obj.find('', {'id': 'zg_paginationWrapper'})
         if node and len(node) > 0:
-            html_url_list = []
-            link_list = []
+            url_list = []
             for item in node.find_all('a'):
-                if item != '\n':
-                    link = item.get('href').strip().replace('\n', '')
-                    html_url_list.append(link)
-            for temp_html_url in html_url_list:
-                getSub20Items(temp_html_url, link_list)
-            print(link_list)
+                url = item.get('href').strip()
+                url_list.append(url)
+
+            if len(url_list) > 0:
+                getSub20Items(url_list, info_arg[0])
 
 
 # 分5次获取Top 100 items, 每次20条
-def getSub20Items(html_url, link_list):
-    try:
-        request = urllib.request.Request(html_url, postdata, headers)
-        html_file = opener.open(request)
-    except:
-        print(html_url + ' open failed.')
-    else:
-        cookie.save(ignore_discard=True, ignore_expires=True)
+def getSub20Items(url_list_arg, base_id_arg):
+    global id_g
+    rank_value = 1
+    for url in url_list_arg:
+        if rank_value == 101:
+            rank_value = 1
+        asin_list = []
+        try:
+            request = urllib.request.Request(url, postdata, headers)
+            response = opener.open(request)
+        except:
+            print(url + ' open failed.')
+        else:
+            cookie.save(ignore_discard=True, ignore_expires=True)
 
-        bs_obj = BeautifulSoup(html_file.read(), 'html.parser')
+            bs_obj = BeautifulSoup(response.read(), 'html.parser')
 
-        # 排除script脚本
-        for script in bs_obj(['script', 'style']):
-            script.extract()
+            # 排除script脚本
+            for script in bs_obj(['script', 'style']):
+                script.extract()
 
-        print(html_url + ":")
-        node = bs_obj.find('', {'id': 'zg_critical'})
-        if node and len(node) > 0:
-            for item in node.find_all('a'):
-                if item != '\n':
-                    link = item.get('href').strip().replace('\n', '')
-                    if "/product-reviews" in link:
-                        link = "https://www.amazon.co.jp/dp/" + link[len("/product-reviews/") : link.rfind("/")]
-                        if link not in link_list:
-                            print(link)
-                            link_list.append(link)
+            node = bs_obj.find('', {'id': 'zg_critical'})
+            if node and len(node) > 0:
+                for item in node.find_all('a'):
+                    url = item.get('href').strip()
+                    if asin_filter_g not in url:
+                        continue
+                    asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
+                    if asin in asin_list:
+                        continue
+                    info = []
+                    # name = translate1(item.get_text().strip())
+                    name = item.get_text().strip()
+                    info.append(id_g)
+                    info.append(base_id_arg)
+                    info.append(rank_value)
+                    info.append(asin)
+                    info.append(rank_value)
+                    insertItemInfo(info)
+                    print(info)
+                    id_g += 1
+                    rank_value += 1
+                    asin_list.append(asin)
 
-        node = bs_obj.find('', {'id': 'zg_nonCritical'})
-        if node and len(node) > 0:
-            for item in node.find_all('a'):
-                if item != '\n':
-                    link = item.get('href').strip().replace('\n', '')
-                    if "/product-reviews" in link:
-                        link = "https://www.amazon.co.jp/dp/" + link[len("/product-reviews/") : link.rfind("/")]
-                        if link not in link_list:
-                            print(link)
-                            link_list.append(link)
 
 
-# 主方法
-if __name__ == '__main__':
-    html_url = 'https://www.amazon.co.jp/gp/bestsellers/'
+            node = bs_obj.find('', {'id': 'zg_nonCritical'})
+            if node and len(node) > 0:
+                for item in node.find_all('a'):
+                    url = item.get('href').strip()
+                    if asin_filter_g not in url:
+                        continue
+                    asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
+                    if asin in asin_list:
+                        continue
+                    info = []
+                    # name = translate1(item.get_text().strip())
+                    # name = item.get_text().strip()
+                    info.append(id_g)
+                    info.append(base_id_arg)
+                    info.append(rank_value)
+                    info.append(asin)
+                    info.append(rank_value)
+                    insertItemInfo(info)
+                    print(info)
+                    id_g += 1
+                    rank_value += 1
+                    asin_list.append(asin)
 
-    link_list = getHtmlUrlList(html_url)
 
-    startMutilThread(link_list)
+# 添加分类信息到数据库
+def insertItemInfo(info):
+    insert_code = 'insert into top100 values(%s, %s, %s, %s, %s)'
+    cur.execute(insert_code, (info[0], info[1], info[2], info[3], info[4]))
+    conn.commit()
+
+
+# 连接数据库
+conn = pymysql.connect(host='amazondata.mysql.rds.aliyuncs.com', user='root', passwd='1qaz2wsx@12',
+                       db='amazondata', port=3306, charset='utf8')
+cur = conn.cursor()
+
+
+cur.execute('delete from top100')
+conn.commit()
+
+
+cur.execute('select * from category')
+conn.commit()
+
+
+category_info_list = cur.fetchall()
+for category_info in category_info_list[5:]:
+    getTop100Items(category_info)
+
+
+# 断开数据库
+cur.close()
+conn.close()
