@@ -344,24 +344,35 @@ def ranking(asin,ranknumber,category):
 
 # 删除空行
     zero_row = [0,0,0]
-    for zero_row in tb_info:
+    for item in tb_info:
         while tb_info.count(zero_row)>=1:
             tb_info.remove(zero_row)
 
 
 #---------初步筛选数据----------------
     # 剪除名称不相关的数据
+    dellist = []
     for i in range(len(tb_info)):
-        similar_index = int(similar_ratio(amazon_title,tb_info[i][0])*10)
-        tb_info[i][0] = similar_index
+        similar_index = similar_ratio(amazon_title,tb_info[i][0])
+        if similar_index < 0.3 :
+            dellist.append(tb_info[i][0])
 
-    tb_info = filter(lambda x: x < 2, tb_info)
-
+    for item in dellist:
+        for i in tb_info:
+            while tb_info.count(item) >= 1:
+                tb_info.remove(item)
 
     # 剪除价格明显问题的数据
+
+    dellist = []
     for i in range(len(tb_info)):
-        if tb_info[i][2] < (0.2)*amazon_price:
-            del tb_info[i]
+        if tb_info[i][1] < amazon_price*0.8 :
+            dellist.append(tb_info[i][1])
+
+    for item in dellist:
+        for i in tb_info:
+            while tb_info[:][1].count(item) >= 1:
+                tb_info.remove(item)
 
 # ---------根据统计学筛选数据----------------
     price_sum1 = 0.0
