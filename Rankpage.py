@@ -13,10 +13,13 @@ import numpy
 import Levenshtein
 import re
 from Utils import *
+import operator
+import math
+
 
 # 2 ----------------常量定义
 # 汇率(API)
-exchange_rate = 15
+exchange_rate = 16.24
 # 利润率(可调)
 profit_rate = 0
 # 包装重量(克)
@@ -38,80 +41,21 @@ delete_html_head_reg = re.compile('<[^>]*>')
 delete_n_reg = re.compile('\n*')
 reg_replace = re.compile('\n|\'|[|]|【|】')
 
-# 通过图片获取淘宝竞争品的信息
-def get_taobao_data(amazon_picture_name):
-    driver = webdriver.Firefox()
-    try:
-        driver.get('https://www.taobao.com/')
-    except Exception as e:
-        print(e)
-
-    try:
-        driver.find_element_by_id("J_IMGSeachUploadBtn").clear() # 非常奇怪，没有这句话无法工作
-        time.sleep(5)
-        driver.find_element_by_id("J_IMGSeachUploadBtn").send_keys(amazon_picture_name)
-        driver.find_element_by_id("J_IMGSeachUploadBtn").send_keys(Keys.ENTER)
-    except Exception as e:
-        print(e)
-    time.sleep(5)
-    get_html = driver.page_source
-    driver.quit()
-    bs_obj = BeautifulSoup(get_html,'html.parser')
-    target_div_node = bs_obj.find('div', {'class': 'items g-clearfix'})
-
-
-    taobao_output_data = [[0 for col in range(3)]for row in range(len(target_div_node))]
-    for i in range(len(target_div_node)):
-       for j in range(3):
-            print(taobao_output_data[i][j])
-
-
-    if target_div_node and len(target_div_node) > 0:
-        number = 0
-        for items_div in target_div_node.find_all('div', {'class': r'row row-2 title'}): #获取名称
-            item_name = items_div.get_text().strip()
-            taobao_output_data[number][0] = item_name
-            number += 1
-            print (item_name)
-
-        number = 0
-        for items_div in target_div_node.find_all('div', {'class': 'price g_price g_price-highlight'}): #获取价格
-            item_price = int(int(re.sub("\D", "", items_div.get_text().strip()))/100)
-            taobao_output_data[number][1] = item_price
-            number += 1
-            print(item_price)
-
-        number = 0
-        for items_div in target_div_node.find_all('div', {'class': 'deal-cnt'}): #获取销量
-            item_account = int(re.sub("\D", "", items_div.get_text().strip()))
-            taobao_output_data[number][2] = item_account
-            number += 1
-            print(item_account)
-
-    return taobao_output_data
-
-
 # 获取亚马逊商品信息
-def pull_amazon_Data(asin):
+def pull_amazon_Data(asin,amazon_image_path):
     html_url = r'https://www.amazon.co.jp/dp/' + asin
+    product_info_list = []
     # 提取网页内容
     try:
+        cookie.save(ignore_discard=True, ignore_expires=True)
         request = urllib.request.Request(html_url, postdata, headers)
         html_file = opener.open(request)
+        bs_obj = BeautifulSoup(html_file.read(), 'html.parser')
+        for script in bs_obj(['script', 'style']):
+            script.extract()
     except:
         print('open html failed **************************')
 
-    print(u'打印获取数据: ')
-
-        # 商品总信息列表
-    product_info_list = []
-
-    cookie.save(ignore_discard=True, ignore_expires=True)
-    bs_obj = BeautifulSoup(html_file.read(), 'html.parser')
-
-        # 排除script脚本*************************************
-    for script in bs_obj(['script', 'style']):
-        script.extract()
 
     # 3.1 宝贝名称
     title = ''
@@ -168,9 +112,14 @@ def pull_amazon_Data(asin):
             ship_price = 0
     println(u'ship_price--配送费: %s' % ship_price)
 
-        # 商品详细
+    # 商品详细
     detail_label_list = []
     detail_value_list = []
+    weight_temp = ''
+    type_temp = ''
+    asin_temp = ''
+    startday_temp = ''
+
     detail_node = bs_obj.find('', {'id': 'prodDetails'})
     detail_bullets_node = bs_obj.find('', {'id': 'detail_bullets_id'})
     if detail_node and len(detail_node) > 0:
@@ -182,26 +131,38 @@ def pull_amazon_Data(asin):
             if value_text != '\n':
                 value = value_text.get_text().strip().replace('\n', '')
                 detail_value_list.append(value)
+        # 获取重要信息
+        # 重量信息
+        for i in range(len(detail_label_list)):
+            if re.search(r".*重量.*", detail_label_list[i]) != None:
+                weight_temp = detail_value_list[i]
+            if re.search(r".*型番.*", detail_label_list[i]) != None:
+                type_temp = detail_value_list[i]
+            if re.search(r".*ASIN.*", detail_label_list[i]) != None:
+                asin_temp = detail_value_list[i]
+            if re.search(r".*開始日.*", detail_label_list[i]) != None:
+                startday_temp = detail_value_list[i]
     elif detail_bullets_node and len(detail_bullets_node) >0:
-        print(u'没有table的页面')
+        for item in detail_bullets_node.find_all('li'):
+            item_text = item.get_text().strip().replace('\n', '')
+            if re.search(r".*重量.*", item_text) != None:
+                weight_temp = re.sub(r".*:","",item_text).strip()
+            if re.search(r".*型番.*", item_text) != None:
+                type_temp = re.sub(r".*型番.","",item_text).strip()
+            if re.search(r".*ASIN.*", item_text) != None:
+                asin_temp = re.sub(r".*:", "", item_text).strip()
+            if re.search(r".*開始日.*", item_text) != None:
+                startday_temp = re.sub(r".*:", "", item_text).strip()
 
-        # 价格
-    weight_temp = str('1000000克')
-    for i in range(len(detail_label_list)):
-        if re.search(r".*重量.*", detail_label_list[i]) != None:
-            weight_temp = detail_value_list[i]
-            break
-        if re.search(r".*公斤.*", weight_temp) != None:
-            weight = int(1000*float((weight_temp.replace(u'公斤', '').strip())))
-        elif re.search(r".*克.*", weight_temp) != None:
-            weight = int(weight_temp.replace(u'克', '').strip())
-        else:
-            weight = 1000000
-        if (weight + packet_weight) < 500:
-            ems = 100
-        else:
-            ems = 100 + ((weight + packet_weight - 500) / 100) * 10
-        price = round(((src_price + ship_price) / exchange_rate + (ems)) * (1 + profit_rate))
+# 获取价格
+    if re.search(r".*Kg.*", weight_temp) != None:
+        weight_factor =1000
+    else:
+        weight_factor = 1
+
+    packet_total_weight = int(float(weight_temp.replace(u'K','').replace(u'g','').strip()) * weight_factor)+ packet_weight
+    ems = ems_fee(packet_total_weight)
+    price = round(((src_price + ship_price + ems) / exchange_rate) * (1 + profit_rate))
 
         # 4
     product_info_list.append(price)
@@ -209,12 +170,11 @@ def pull_amazon_Data(asin):
 
 
         # 发布时间
-    release_time = ''
     now_days = datetime.datetime.now()
     sale_days = 0
     for i in range(len(detail_label_list)):
-        if re.search(r".*開始日.*", detail_label_list[i]) != None:
-            temptime = detail_value_list[i].replace("/", "-")
+        if startday_temp != None:
+            temptime = startday_temp.replace("/", "-")
             release_day = datetime.datetime.strptime(temptime, "%Y-%m-%d")
             sale_days = (now_days - release_day).days
 
@@ -248,12 +208,12 @@ def pull_amazon_Data(asin):
         brand = translate1(brand_node.get_text().strip().replace('\'', ''))
 
         # 7
-    product_info_list.append(brand)
+    product_info_list.append(brand + type_temp)
     println(u'brand--品牌: %s' % brand)
 
 
         # 图片地址
-    picure_temp_path = sys.path[0] + '/Temp_images/'+ asin + '.jpg'
+
     image_list = []
     image_node = bs_obj.find('', {'id': 'altImages'})
     if image_node and len(image_node) > 0:
@@ -268,20 +228,26 @@ def pull_amazon_Data(asin):
     pd_list = []
     pd_node = bs_obj.find('div', id=re.compile(".*descriptionAndDetails.*"))
     if pd_node and len(pd_node) > 0:
-        image_head_deleted_content_product = delete_img_head_reg.sub('', pd_node.prettify())
-        html_head_deleted_content_product = delete_html_head_reg.sub('', image_head_deleted_content_product).replace(' ', '').strip('\n')
-        pd_list_temp = delete_n_reg.split(html_head_deleted_content_product)
-        for pd_item in pd_list_temp:
-            if re.search('http', pd_item) == None:
-                pd_temp = reg_replace.sub('', pd_item)
-            else:
-                pd_temp = re.search(r"http.*(jpg|png)", pd_item).group(0)
-            pd_list.append(pd_temp)
+        for image_text in pd_node.find_all('img'):
+            if image_text != '\n':
+                image = image_text.get('src')
+                pd_list.append(image)
     print(u'pd_list--描述: ')
     println(pd_list)
 
+    # pd_list描述
+    aplus_list = []
+    aplus_node = bs_obj.find('div', id=re.compile(".*aplus_feature_div.*"))
+    if aplus_node and len(aplus_node) > 0:
+        for image_text in aplus_node.find_all('img'):
+            if image_text != '\n':
+                image = image_text.get('src')
+                aplus_list.append(image)
+    print(u'pd_list--描述: ')
+    println(aplus_list)
 
-    picture_number = len(image_list) + len(pd_list)
+
+    picture_number = len(image_list) + len(pd_list) + len(aplus_list)
 
         # 8
     product_info_list.append(picture_number)
@@ -289,49 +255,91 @@ def pull_amazon_Data(asin):
 
     # 保存第一张图片
     try:
-        if not os.path.exists(picure_temp_path):
-            urllib.request.urlretrieve(image_list[0],picure_temp_path)
+        if not os.path.exists(amazon_image_path):
+            urllib.request.urlretrieve(image_list[0],amazon_image_path)
     except Exception as e:
             print(e)
 
         # 9
-    product_info_list.append(picure_temp_path)
-    println(u'图片个数: %s' % picure_temp_path)
+    product_info_list.append(amazon_image_path)
+    println(u'图片个数: %s' % amazon_image_path)
 
         # 3.51 物流重量
-    item_weight = int(round(((weight + packet_weight) / 1000), 1))
 
         # 10
-    product_info_list.append(item_weight)
-    println(u'item_weight--物流重量: %s' % item_weight)
+    product_info_list.append(packet_total_weight)
+    println(u'item_weight--物流重量: %s' % packet_total_weight)
 
     # 返回获取的数据结果
     return product_info_list
+# 通过图片获取淘宝竞争品的信息
+def pull_taobao_data(amazon_picture_name):
+    driver = webdriver.Firefox()
+    try:
+        driver.get('https://www.taobao.com/')
+    except Exception as e:
+        print(e)
 
-def similar_ratio(str1, str2):
-    similar_index = Levenshtein.jaro(str1, str2)
-    return similar_index
+    try:
+        driver.find_element_by_id("J_IMGSeachUploadBtn").clear() # 非常奇怪，没有这句话无法工作
+        time.sleep(5)
+        driver.find_element_by_id("J_IMGSeachUploadBtn").send_keys(amazon_picture_name)
+        driver.find_element_by_id("J_IMGSeachUploadBtn").send_keys(Keys.ENTER)
+    except Exception as e:
+        print(e)
+    time.sleep(5)
+    get_html = driver.page_source
+    driver.quit()
+    bs_obj = BeautifulSoup(get_html,'html.parser')
+    target_div_node = bs_obj.find('div', {'class': 'items g-clearfix'})
 
+    taobao_output_data = [[0 for col in range(4)]for row in range(len(target_div_node))]
+    if target_div_node and len(target_div_node) > 0:
+        number = 0
+        for items_div in target_div_node.find_all('div', {'class': r'row row-2 title'}): #获取名称
+            item_name = items_div.get_text().strip()
+            taobao_output_data[number][0] = item_name
+            number += 1
+            print (item_name)
 
+        number = 0
+        for items_div in target_div_node.find_all('div', {'class': 'price g_price g_price-highlight'}): #获取价格
+            item_price = int(int(re.sub("\D", "", items_div.get_text().strip()))/100)
+            taobao_output_data[number][1] = item_price
+            number += 1
+            print(item_price)
+
+        number = 0
+        for items_div in target_div_node.find_all('div', {'class': 'deal-cnt'}): #获取销量
+            item_account = int(re.sub("\D", "", items_div.get_text().strip()))
+            taobao_output_data[number][2] = item_account
+            number += 1
+            print(item_account)
+
+        number = 0
+        for items_div in target_div_node.find_all('img', {'class': 'J_ItemPic img'}): #获取销量
+            item_image = items_div.get('src').strip()
+            taobao_output_data[number][3] = item_image
+            number += 1
+            print(item_image)
+
+    return taobao_output_data
+# 进行评比对比
 def ranking(asin,ranknumber,category):
+    amazon_image_path = sys.path[0] + '/Temp_images/' + asin + '.jpg'
     rank_value = 0
     asin_info = []
     tb_info = [[]]
 
-    asin_info = pull_amazon_Data(asin)
+    asin_info = pull_amazon_Data(asin,amazon_image_path)
     time.sleep(3)
-    tb_info = get_taobao_data(asin_info[9].replace("/",os.sep))
-
-#   删除文件
-    if tb_info and len(tb_info) > 0:
-        try:
-            os.remove(asin_info[9].replace("/",os.sep))
-        except Exception as e:
-            print(e)
+    tb_info = pull_taobao_data(asin_info[9].replace("/",os.sep))
+    time.sleep(5)
 
 # 把字符串等数据处理成为数值
 
-    amazon_title = str(asin_info[0]) + str(asin_info[7])
+    amazon_title = str(asin_info[0])
+    amazon_title_2nd = "日本直邮"+ str(asin_info[7]) + category
     amazon_star_number = int(re.sub("\D", "", asin_info[1]))
     amazon_revi_number = int(re.sub("\D", "", asin_info[2]))
     amazon_price = int(asin_info[4])
@@ -343,128 +351,124 @@ def ranking(asin,ranknumber,category):
     amazon_catagory = category
 
 # 删除空行
-    zero_row = [0,0,0]
+    zero_row = [0,0,0,0]
     for item in tb_info:
         while tb_info.count(zero_row)>=1:
             tb_info.remove(zero_row)
 
+# 对数据进行变换，将决对的数据转化为指数
 
-#---------初步筛选数据----------------
-    # 剪除名称不相关的数据
-    dellist = []
-    for i in range(len(tb_info)):
-        similar_index = similar_ratio(amazon_title,tb_info[i][0])
-        if similar_index < 0.3 :
-            dellist.append(tb_info[i][0])
+            #  进行筛选， 第一，筛选图片相似度， 第二筛选名称相似度， 第三，筛选价格
+    title_corelation_critial = 0.85
+    title_aux_critial = 0.5
+    image_corelation_critial = 0.85
+    image_aux_critial = 0.5
+    title_image_mix = 1.1
+    price_corelation_critial_min = -0.3
+    price_corelation_critial_max = 3
+    price_impact_factor = 10
+    volume_impact_factor = 0.1
 
-    for item in dellist:
-        for i in tb_info:
-            while tb_info.count(item) >= 1:
-                tb_info.remove(item)
 
-    # 剪除价格明显问题的数据
+    tb_index = [[0 for col in range(4)] for row in range(len(tb_info))]
+    for item in tb_info:
+        a1 = (compare_str(item[0],amazon_title))
+        a2 = (compare_str(item[0],amazon_title_2nd))
+        #提升翻译准确度很重要
+        if a1 >= a2:
+            a =a1
+        else:
+            a =a2
+        b = (item[1]- amazon_price)/amazon_price
+        c = item[2]
+        # 获取图片对结果
+        tb_image_path = sys.path[0] + '/Temp_images/' + 'tb'+ '.jpg'
+        try:
+            if not os.path.exists(tb_image_path):
+                tb_image_url = 'https:'+ item[3]
+                urllib.request.urlretrieve(tb_image_url, tb_image_path)
+        except Exception as e:
+            print(e)
 
-    dellist = []
-    for i in range(len(tb_info)):
-        if tb_info[i][1] < amazon_price*0.8 :
-            dellist.append(tb_info[i][1])
+        d = compare_image(amazon_image_path,tb_image_path,size=(220,220))
+        try:
+            os.remove(tb_image_path)
+        except Exception as e:
+            print(e)
 
-    for item in dellist:
-        for i in tb_info:
-            while tb_info[:][1].count(item) >= 1:
-                tb_info.remove(item)
+        if a >= title_corelation_critial and d>=image_aux_critial and b>= price_corelation_critial_min and b < price_corelation_critial_max:
+            tb_index.append([a, b, c, d])
+        elif d >= image_corelation_critial and a>=title_aux_critial and b>= price_corelation_critial_min and b < price_corelation_critial_max:
+            tb_index.append([a, b, c, d])
+        elif a + d >= title_image_mix and b>= price_corelation_critial_min and b < price_corelation_critial_max:
+            tb_index.append([a, b, c, d])
 
-# ---------根据统计学筛选数据----------------
-    price_sum1 = 0.0
-    price_sum2 = 0.0
-    volume_sum1 = 0.0
-    volume_sum2 = 0.0
-    for i in range(len(tb_info)):
-        price_sum1 += tb_info[i][2]
-        volume_sum1 += tb_info[i][1]
-        price_sum2 += tb_info[i][2] ** 2
-        volume_sum2 += tb_info[i][1] ** 2
-    price_mean = price_sum2 /len(tb_info)
-    price_var = price_sum2 / len(tb_info) - price_mean ** 2
-    volume_mean = volume_sum1 /len(tb_info)
-    volume_var = volume_sum2 / len(tb_info) - volume_mean ** 2
+    for item in tb_index:
+        while tb_index.count(zero_row)>=1:
+            tb_index.remove(zero_row)
 
-    # 按照销量从高到低排序
-    tb_info_sorted = sorted(tb_info,key=lambda x:x[1],reverse=True)
-
-    # 计算取前几名
-    j = 8
-    for i in range(len(tb_info_sorted)):
-        if volume_var/i < 2:
-            j -= 1
-
-# 销量方差越大，取平均的数量就越少，销量方差大于5，取平均前3名？
-# 销量前三名的平均价格作为该产品价格
-
-    # 根据偏离平均值的程度和方差，进一步剪除价格有问题的数据，
-    sum_price = 0
-    for i in range(j):
-        sum_price += tb_info_sorted[i][2]
-    mean_price = int(sum_price/j)
-
+    if tb_index != None and len(tb_index) !=0:
+        tb_index.sort(key=operator.itemgetter(2))
+        tb_price_gap = tb_index[0][1]*100
+        tb_volume = math.log(tb_index[0][2]+2)*10
+        tb_rank = tb_price_gap * tb_volume
+    else:
+        tb_rank = 100
 
 
 # 计算推荐程度
-    rank_result = 1000
     if amazon_availability == 2:
-        rank_result -= 200
+        rank_availability = 0
     elif amazon_availability == 3:
-        rank_result -= 600
+        rank_availability = -50
     elif amazon_availability == 4:
-        rank_result -= 800
+        rank_availability = -1000
     elif amazon_availability == 5:
-        rank_result -=  900
+        rank_availability = -1000
     else:
-        rank_result = 0
+        rank_availability = 0
 
 
-    if amazon_item_weight >= 25000:
-        rank_result -= 900
+    if amazon_item_weight >= 30000:
+        rank_weight = -1000
     elif amazon_item_weight >= 10000:
-        rank_result -= 100
+        rank_weight = -100
     elif amazon_item_weight >= 5000:
-        rank_result -= 50
+        rank_weight = -50
     elif amazon_item_weight >= 1000:
-        rank_result -= 10
+        rank_weight = -10
+    else:
+        rank_weight = 0
 
 
     if amazon_price >= 3000:
-        rank_result -= 300
+        rank_price = -300
     elif amazon_price >= 2000:
-        rank_result -= 10
+        rank_price = -10
     elif amazon_price <= 100:
-        rank_result -= 20
+        rank_price = -20
     elif amazon_price <= 150:
-        rank_result -= 10
+        rank_price = -10
+    else:
+        rank_price = 0
+
 
     #coefficient of star
-    if amazon_revi_number <= 10:
-        coefficient = 15
-    elif amazon_revi_number > 10 and amazon_price <= 50:
-        coefficient = 10
-    elif amazon_revi_number > 50 and amazon_price <= 100:
-        coefficient = 5
-    elif amazon_revi_number > 100 and amazon_price <= 300:
-        coefficient = 2
-    elif amazon_revi_number > 300 and amazon_price <= 1000:
-        coefficient = 1
-    else:
-        coefficient = 0.5
 
+    rank_review = math.log(amazon_revi_number+2)
 
-    output_rank = rank_result - (550-amazon_star_number)*coefficient - amazon_days*0.01 - amazon_ranknum*0.1 + ((mean_price-amazon_price)/amazon_price)*400
+    output_rank = tb_rank + rank_availability + rank_weight + rank_price + (amazon_star_number-550)*rank_review + math.log(amazon_days+2)*10 - math.log(amazon_ranknum+2)*10 + amazon_picture_number
 
+    #   删除文件
+    if tb_info and len(tb_info) > 0:
+        try:
+            os.remove(asin_info[9].replace("/", os.sep))
+        except Exception as e:
+            print(e)
 
+    print("rank value")
+    print(output_rank)
     return output_rank
 
-
-
-
-
 if __name__ == '__main__':
-    ranking('B0013NHU6K',4, 'category')
+    ranking('B000X12IZQ',88, '蒸汽熨斗')

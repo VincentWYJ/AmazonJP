@@ -9,6 +9,9 @@ import hashlib
 import urllib
 import random
 import json
+from PIL import Image
+import Levenshtein
+import os
 
 appid = '20170525000049178'
 secretKey = 'CJ3amNC3iyx4pR3AnmZs'
@@ -98,6 +101,58 @@ def translate(q):
 # 3----------------添加换行打印方法
 def println(text):
     print(str(text) + '\n')
+
+
+def ems_fee(weight):
+    if weight <= 500:
+        ems_price = 1400
+    elif weight < 1000:
+        ems_price = 1400 + int((weight - 500)/100) *140
+    elif weight == 1000:
+        ems_price = 2100
+    elif weight < 2000:
+        ems_price = 2100 + int((weight - 1000) / 250) * 300
+    elif weight == 2000:
+        ems_price = 3300
+    elif weight < 6000:
+        ems_price = 3300 + int((weight - 2000) / 500) * 500
+    elif weight == 6000:
+        ems_price = 7300
+    elif weight < 30000:
+        ems_price = 7300 + int((weight - 6000) / 1000) * 800
+    elif weight == 30000:
+        ems_price = 26500
+    else:
+        ems_price = 2650000
+    return ems_price
+
+#This module can classify the image by histogram.
+#This method is easy for someone who is a beginner in Image classification.
+#Size' is parameter what the image will resize to it.It's 256 * 256 when it default.
+#This function return the similarity rate betweene 'image1' and 'image2'
+def compare_image(image_path1,image_path2,size = (256,256)):
+    image1 = Image.open(image_path1)
+    image1 = image1.resize(size).convert("RGB")
+    g = image1.histogram()
+    image2 = Image.open(image_path2)
+    image2 = image2.resize(size).convert("RGB")
+    s = image2.histogram()
+    assert len(g) == len(s), "error"
+
+    data = []
+
+    for index in range(0, len(g)):
+        if g[index] != s[index]:
+            data.append(1 - abs(g[index] - s[index]) / max(g[index], s[index]))
+        else:
+            data.append(1)
+
+    ratio = sum(data) / len(g)
+    return ratio
+
+def compare_str(str1, str2):
+    similar_index = Levenshtein.jaro(str1, str2)
+    return similar_index
 
 # 3.1 方法测试
 # println('Hello')
