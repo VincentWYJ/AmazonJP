@@ -30,7 +30,6 @@ delete_tag_g = re.compile('/ref=zg_.*')
 id_g = 1
 url_g = 'https://www.amazon.co.jp/gp/bestsellers/'
 timeout_open_g = 10
-timeout_read_g = 10
 
 
 # 获取5个类型信息：畅销，新品，人气，心愿，礼物

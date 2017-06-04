@@ -24,32 +24,39 @@ opener = urllib.request.build_opener(handler)
 # 全局变量
 asin_filter_g = '/dp/'
 id_g = 1
+timeout_open_g = 10
+
 
 # 获取某类别下Top 100 items
 def getTop100Items(info_arg):
     try:
         request = urllib.request.Request(info_arg[2], postdata, headers)
-        response = opener.open(request)
-    except:
+        response = opener.open(request, timeout=timeout_open_g)
+    except Exception as e:
         print(info_arg[2] + ' open failed.')
+        print(e)
     else:
         cookie.save(ignore_discard=True, ignore_expires=True)
 
-        bs_obj = BeautifulSoup(response.read(), 'html.parser')
+        try:
+            bs_obj = BeautifulSoup(response.read(), 'html.parser')
+        except Exception as e:
+            print(info_arg[2] + ' read failed.')
+            print(e)
+        else:
+            # 排除script脚本
+            for script in bs_obj(['script', 'style']):
+                script.extract()
 
-        # 排除script脚本
-        for script in bs_obj(['script', 'style']):
-            script.extract()
+            node = bs_obj.find('', {'id': 'zg_paginationWrapper'})
+            if node and len(node) > 0:
+                url_list = []
+                for item in node.find_all('a'):
+                    url = item.get('href').strip()
+                    url_list.append(url)
 
-        node = bs_obj.find('', {'id': 'zg_paginationWrapper'})
-        if node and len(node) > 0:
-            url_list = []
-            for item in node.find_all('a'):
-                url = item.get('href').strip()
-                url_list.append(url)
-
-            if len(url_list) > 0:
-                getSub20Items(url_list, info_arg[0])
+                if len(url_list) > 0:
+                    getSub20Items(url_list, info_arg[0])
 
 
 # 分5次获取Top 100 items, 每次20条
@@ -62,65 +69,68 @@ def getSub20Items(url_list_arg, base_id_arg):
         asin_list = []
         try:
             request = urllib.request.Request(url, postdata, headers)
-            response = opener.open(request)
-        except:
+            response = opener.open(request, timeout=timeout_open_g)
+        except Exception as e:
             print(url + ' open failed.')
+            print(e)
         else:
             cookie.save(ignore_discard=True, ignore_expires=True)
 
-            bs_obj = BeautifulSoup(response.read(), 'html.parser')
+            try:
+                bs_obj = BeautifulSoup(response.read(), 'html.parser')
+            except Exception as e:
+                print(url + ' read failed.')
+                print(e)
+            else:
+                # 排除script脚本
+                for script in bs_obj(['script', 'style']):
+                    script.extract()
 
-            # 排除script脚本
-            for script in bs_obj(['script', 'style']):
-                script.extract()
+                node = bs_obj.find('', {'id': 'zg_critical'})
+                if node and len(node) > 0:
+                    for item in node.find_all('a'):
+                        url = item.get('href').strip()
+                        if asin_filter_g not in url:
+                            continue
+                        asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
+                        if asin in asin_list:
+                            continue
+                        info = []
+                        # name = translate1(item.get_text().strip())
+                        name = item.get_text().strip()
+                        info.append(id_g)
+                        info.append(base_id_arg)
+                        info.append(rank_value)
+                        info.append(asin)
+                        info.append(rank_value)
+                        insertItemInfo(info)
+                        print(info)
+                        id_g += 1
+                        rank_value += 1
+                        asin_list.append(asin)
 
-            node = bs_obj.find('', {'id': 'zg_critical'})
-            if node and len(node) > 0:
-                for item in node.find_all('a'):
-                    url = item.get('href').strip()
-                    if asin_filter_g not in url:
-                        continue
-                    asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
-                    if asin in asin_list:
-                        continue
-                    info = []
-                    # name = translate1(item.get_text().strip())
-                    name = item.get_text().strip()
-                    info.append(id_g)
-                    info.append(base_id_arg)
-                    info.append(rank_value)
-                    info.append(asin)
-                    info.append(rank_value)
-                    insertItemInfo(info)
-                    print(info)
-                    id_g += 1
-                    rank_value += 1
-                    asin_list.append(asin)
-
-
-
-            node = bs_obj.find('', {'id': 'zg_nonCritical'})
-            if node and len(node) > 0:
-                for item in node.find_all('a'):
-                    url = item.get('href').strip()
-                    if asin_filter_g not in url:
-                        continue
-                    asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
-                    if asin in asin_list:
-                        continue
-                    info = []
-                    # name = translate1(item.get_text().strip())
-                    # name = item.get_text().strip()
-                    info.append(id_g)
-                    info.append(base_id_arg)
-                    info.append(rank_value)
-                    info.append(asin)
-                    info.append(rank_value)
-                    insertItemInfo(info)
-                    print(info)
-                    id_g += 1
-                    rank_value += 1
-                    asin_list.append(asin)
+                node = bs_obj.find('', {'id': 'zg_nonCritical'})
+                if node and len(node) > 0:
+                    for item in node.find_all('a'):
+                        url = item.get('href').strip()
+                        if asin_filter_g not in url:
+                            continue
+                        asin = url[url.find(asin_filter_g) + 4:url.rfind('/')]
+                        if asin in asin_list:
+                            continue
+                        info = []
+                        # name = translate1(item.get_text().strip())
+                        # name = item.get_text().strip()
+                        info.append(id_g)
+                        info.append(base_id_arg)
+                        info.append(rank_value)
+                        info.append(asin)
+                        info.append(rank_value)
+                        insertItemInfo(info)
+                        print(info)
+                        id_g += 1
+                        rank_value += 1
+                        asin_list.append(asin)
 
 
 # 添加分类信息到数据库
