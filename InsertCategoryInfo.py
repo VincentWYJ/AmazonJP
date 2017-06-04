@@ -46,35 +46,39 @@ def getFiveTypeInfo(url_arg):
     else:
         cookie.save(ignore_discard=True, ignore_expires=True)
 
-        bs_obj = BeautifulSoup(response.read(), 'html.parser')
+        try:
+            bs_obj = BeautifulSoup(response.read(), 'html.parser')
+        except Exception as e:
+            print(url_arg + ' read failed.')
+            print(e)
+        else:
+            # 排除script脚本
+            for script in bs_obj(['script', 'style']):
+                script.extract()
 
-        # 排除script脚本
-        for script in bs_obj(['script', 'style']):
-            script.extract()
+            node = bs_obj.find('', {'id': 'zg_tabs'})
+            if node and len(node) > 0:
+                base_id = 0
+                info_list = []
+                url_list = []
+                for item in node.find_all('a'):
+                    info = []
+                    # name = translate1(item.get_text().strip())
+                    name = item.get_text().strip()
+                    url = item.get('href').strip()
+                    url = delete_tag_g.sub('', url)
+                    info.append(id_g)
+                    info.append(name)
+                    info.append(url)
+                    info.append(base_id)
+                    print(info)
+                    insertCategoryInfo(info)
+                    id_g += 1
+                    info_list.append(info)
+                    url_list.append(url)
 
-        node = bs_obj.find('', {'id': 'zg_tabs'})
-        if node and len(node) > 0:
-            base_id = 0
-            info_list = []
-            url_list = []
-            for item in node.find_all('a'):
-                info = []
-                # name = translate1(item.get_text().strip())
-                name = item.get_text().strip()
-                url = item.get('href').strip()
-                url = delete_tag_g.sub('', url)
-                info.append(id_g)
-                info.append(name)
-                info.append(url)
-                info.append(base_id)
-                print(info)
-                insertCategoryInfo(info)
-                id_g += 1
-                info_list.append(info)
-                url_list.append(url)
-
-            if len(info_list) > 0:
-                getCategoryInfo(info_list, url_list)
+                if len(info_list) > 0:
+                    getCategoryInfo(info_list, url_list)
 
 
 # 获取某个类型下的分类信息
