@@ -9,9 +9,10 @@ import hashlib
 import urllib
 import random
 import json
-from PIL import Image
 import Levenshtein
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import os
+import time
 
 appid = '20170525000049178'
 secretKey = 'CJ3amNC3iyx4pR3AnmZs'
@@ -126,11 +127,56 @@ def ems_fee(weight):
         ems_price = 2650000
     return ems_price
 
+# 等比例压缩图片
+def resizeImg(image_path,save_path,dst_w=0, dst_h=0,qua=95):
+    '''''
+    只给了宽或者高，或者两个都给了，然后取比例合适的
+    如果图片比给要压缩的尺寸都要小，就不压缩了
+    '''
+    im = Image.open(image_path)
+    ori_w, ori_h = im.size
+    widthRatio = heightRatio = None
+    ratio = 1
+    if (ori_w and ori_w > dst_w) or (ori_h and ori_h > dst_h):
+        if dst_w and ori_w > dst_w:
+            widthRatio = float(dst_w) / ori_w  # 正确获取小数的方式
+        if dst_h and ori_h > dst_h:
+            heightRatio = float(dst_h) / ori_h
+
+        if widthRatio and heightRatio:
+            if widthRatio < heightRatio:
+                ratio = widthRatio
+            else:
+                ratio = heightRatio
+
+        if widthRatio and not heightRatio:
+            ratio = widthRatio
+
+        if heightRatio and not widthRatio:
+            ratio = heightRatio
+
+        newWidth = int(ori_w * ratio)
+        newHeight = int(ori_h * ratio)
+    else:
+        newWidth = ori_w
+        newHeight = ori_h
+
+    source_image = im.resize((newWidth, newHeight), Image.ANTIALIAS)
+    source_w, source_h = source_image.size
+    source_box = (0, 0, int(source_w), int(source_h))
+    source_region = source_image.crop(source_box)
+    x_shift = 110 - int(source_w / 2)
+    y_shift = 110 - int(source_h / 2)
+    taget_box = (x_shift, y_shift, (source_w + x_shift),(source_h + y_shift))
+    new_image = Image.new('RGB', (dst_w, dst_h), (255, 255, 255))
+    new_image.paste(source_region,taget_box)
+    new_image.save(save_path, "JPEG", quality=qua)
+
 #This module can classify the image by histogram.
 #This method is easy for someone who is a beginner in Image classification.
 #Size' is parameter what the image will resize to it.It's 256 * 256 when it default.
 #This function return the similarity rate betweene 'image1' and 'image2'
-def compare_image(image_path1,image_path2,size = (256,256)):
+def compare_image(image_path1,image_path2,size = (220,220)):
     image1 = Image.open(image_path1)
     image1 = image1.resize(size).convert("RGB")
     g = image1.histogram()
@@ -153,6 +199,9 @@ def compare_image(image_path1,image_path2,size = (256,256)):
 def compare_str(str1, str2):
     similar_index = Levenshtein.jaro(str1, str2)
     return similar_index
+
+def time_mark():
+    print(time.strftime("%Y-%m-%d %H:%M:%S"))
 
 # 3.1 方法测试
 # println('Hello')

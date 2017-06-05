@@ -46,6 +46,9 @@ def pull_amazon_Data(asin,amazon_image_path):
     html_url = r'https://www.amazon.co.jp/dp/' + asin
     product_info_list = []
     # 提取网页内容
+    print("提取网页内容")
+    time_mark()
+
     try:
         cookie.save(ignore_discard=True, ignore_expires=True)
         request = urllib.request.Request(html_url, postdata, headers)
@@ -56,6 +59,8 @@ def pull_amazon_Data(asin,amazon_image_path):
     except:
         print('open html failed **************************')
 
+    print("提取网页内容成功")
+    time_mark()
 
     # 3.1 宝贝名称
     title = ''
@@ -67,6 +72,8 @@ def pull_amazon_Data(asin,amazon_image_path):
     product_info_list.append(title)
     println(u'title--宝贝名称: %s' % title)
 
+    time_mark()
+
     star_number = ''
     star_number_node = bs_obj.find('span', {'id': 'acrPopover'})
     if star_number_node and len(star_number_node) > 0:
@@ -75,7 +82,7 @@ def pull_amazon_Data(asin,amazon_image_path):
         # 1
     product_info_list.append(star_number)
     println(u'总得分: %s' % star_number)
-
+    time_mark()
 
     reviewer_number = ''
     reviewer_number_node = bs_obj.find('span', {'id': 'acrCustomerReviewText'})
@@ -85,6 +92,7 @@ def pull_amazon_Data(asin,amazon_image_path):
     # 2
     product_info_list.append(reviewer_number)
     println(u'评论数: %s' % reviewer_number)
+    time_mark()
 
     answer_number = ''
     answer_number_node = bs_obj.find('a', {'id': 'askATFLink'})
@@ -94,7 +102,7 @@ def pull_amazon_Data(asin,amazon_image_path):
         # 3
     product_info_list.append(answer_number)
     println(u'回答问题数: %s' % answer_number)
-
+    time_mark()
 
         # 原价
     src_price = 0
@@ -111,6 +119,8 @@ def pull_amazon_Data(asin,amazon_image_path):
         if u'配送無料' in ship_price_text and '¥' not in ship_price_text:
             ship_price = 0
     println(u'ship_price--配送费: %s' % ship_price)
+
+    time_mark()
 
     # 商品详细
     detail_label_list = []
@@ -154,6 +164,10 @@ def pull_amazon_Data(asin,amazon_image_path):
             if re.search(r".*開始日.*", item_text) != None:
                 startday_temp = re.sub(r".*:", "", item_text).strip()
 
+    print("提取属性成功")
+    time_mark()
+
+
 # 获取价格
     if re.search(r".*Kg.*", weight_temp) != None:
         weight_factor =1000
@@ -167,6 +181,7 @@ def pull_amazon_Data(asin,amazon_image_path):
         # 4
     product_info_list.append(price)
     println(u'price--宝贝价格: %s' % price)
+    time_mark()
 
 
         # 发布时间
@@ -181,6 +196,7 @@ def pull_amazon_Data(asin,amazon_image_path):
     # 5
     product_info_list.append(sale_days)
     println(u'发布时间: %s' % sale_days)
+    time_mark()
 
      # 可用性
     availability = 5
@@ -200,6 +216,7 @@ def pull_amazon_Data(asin,amazon_image_path):
         # 6
     product_info_list.append(availability)
     println(u'可用性: %d' % availability)
+    time_mark()
 
         # 品牌
     brand = ''
@@ -210,7 +227,7 @@ def pull_amazon_Data(asin,amazon_image_path):
         # 7
     product_info_list.append(brand + type_temp)
     println(u'brand--品牌: %s' % brand)
-
+    time_mark()
 
         # 图片地址
 
@@ -222,7 +239,7 @@ def pull_amazon_Data(asin,amazon_image_path):
                 image = image_text.get('src').replace('SS40', 'SL600')
                 image_list.append(image)
     print(u'image_list--图片地址: ')
-    println(image_list)
+    time_mark()
 
     # pd_list描述
     pd_list = []
@@ -233,7 +250,7 @@ def pull_amazon_Data(asin,amazon_image_path):
                 image = image_text.get('src')
                 pd_list.append(image)
     print(u'pd_list--描述: ')
-    println(pd_list)
+    time_mark()
 
     # pd_list描述
     aplus_list = []
@@ -244,42 +261,45 @@ def pull_amazon_Data(asin,amazon_image_path):
                 image = image_text.get('src')
                 aplus_list.append(image)
     print(u'pd_list--描述: ')
-    println(aplus_list)
-
+    time_mark()
 
     picture_number = len(image_list) + len(pd_list) + len(aplus_list)
 
         # 8
     product_info_list.append(picture_number)
     println(u'图片个数: %d' % picture_number)
+    time_mark()
 
+     # 3.51 物流重量
+    # 9
+    product_info_list.append(packet_total_weight)
+    println(u'item_weight--物流重量: %s' % packet_total_weight)
+    time_mark()
     # 保存第一张图片
     try:
         if not os.path.exists(amazon_image_path):
             urllib.request.urlretrieve(image_list[0],amazon_image_path)
+            now = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(now)
     except Exception as e:
             print(e)
-
-        # 9
-    product_info_list.append(amazon_image_path)
-    println(u'图片个数: %s' % amazon_image_path)
-
-        # 3.51 物流重量
-
-        # 10
-    product_info_list.append(packet_total_weight)
-    println(u'item_weight--物流重量: %s' % packet_total_weight)
+    print("保存图片成功")
+    time_mark()
 
     # 返回获取的数据结果
     return product_info_list
 # 通过图片获取淘宝竞争品的信息
 def pull_taobao_data(amazon_picture_name):
+    print("获取淘宝开始")
+    time_mark()
+
     driver = webdriver.Firefox()
     try:
         driver.get('https://www.taobao.com/')
     except Exception as e:
         print(e)
-
+    print("获取淘宝页面成功")
+    time_mark()
     try:
         driver.find_element_by_id("J_IMGSeachUploadBtn").clear() # 非常奇怪，没有这句话无法工作
         time.sleep(5)
@@ -287,11 +307,22 @@ def pull_taobao_data(amazon_picture_name):
         driver.find_element_by_id("J_IMGSeachUploadBtn").send_keys(Keys.ENTER)
     except Exception as e:
         print(e)
+
+    print("设置图片搜索成功")
+    time_mark()
+
     time.sleep(5)
     get_html = driver.page_source
     driver.quit()
+
+    print("获取淘宝结果成功")
+    time_mark()
+
     bs_obj = BeautifulSoup(get_html,'html.parser')
     target_div_node = bs_obj.find('div', {'class': 'items g-clearfix'})
+
+    print("获取OBJ")
+    time_mark()
 
     taobao_output_data = [[0 for col in range(4)]for row in range(len(target_div_node))]
     if target_div_node and len(target_div_node) > 0:
@@ -323,20 +354,40 @@ def pull_taobao_data(amazon_picture_name):
             number += 1
             print(item_image)
 
+    print("获取taobao_data")
+    time_mark()
+
     return taobao_output_data
 # 进行评比对比
 def ranking(asin,ranknumber,category):
     amazon_image_path = sys.path[0] + '/Temp_images/' + asin + '.jpg'
+    amazon_image_path_temp = sys.path[0] + '/Temp_images/' + asin + '_temp' + '.jpg'
     rank_value = 0
     asin_info = []
     tb_info = [[]]
 
+    print("开始获取亚马逊信息")
+    time_mark()
+
     asin_info = pull_amazon_Data(asin,amazon_image_path)
+
+
+
     time.sleep(3)
-    tb_info = pull_taobao_data(asin_info[9].replace("/",os.sep))
+
+    print("开始获取淘宝信息")
+    time_mark()
+
+
+    tb_info = pull_taobao_data(amazon_image_path.replace("/",os.sep))
     time.sleep(5)
 
+
+
+
 # 把字符串等数据处理成为数值
+    print("把字符串等数据处理成为数值")
+    time_mark()
 
     amazon_title = str(asin_info[0])
     amazon_title_2nd = "日本直邮"+ str(asin_info[7]) + category
@@ -346,7 +397,7 @@ def ranking(asin,ranknumber,category):
     amazon_days = int(asin_info[5])
     amazon_availability = int(asin_info[6])
     amazon_picture_number = int(asin_info[8])
-    amazon_item_weight = int(asin_info[10])
+    amazon_item_weight = int(asin_info[9])
     amazon_ranknum = ranknumber
     amazon_catagory = category
 
@@ -369,6 +420,8 @@ def ranking(asin,ranknumber,category):
     price_impact_factor = 10
     volume_impact_factor = 0.1
 
+    print("获取淘宝推荐")
+    time_mark()
 
     tb_index = [[0 for col in range(4)] for row in range(len(tb_info))]
     for item in tb_info:
@@ -390,6 +443,7 @@ def ranking(asin,ranknumber,category):
         except Exception as e:
             print(e)
 
+        resizeImg(amazon_image_path,amazon_image_path_temp,220,220,95)
         d = compare_image(amazon_image_path,tb_image_path,size=(220,220))
         try:
             os.remove(tb_image_path)
@@ -415,7 +469,8 @@ def ranking(asin,ranknumber,category):
     else:
         tb_rank = 100
 
-
+    print("计算推荐程度")
+    time_mark()
 # 计算推荐程度
     if amazon_availability == 2:
         rank_availability = 0
@@ -459,16 +514,23 @@ def ranking(asin,ranknumber,category):
 
     output_rank = tb_rank + rank_availability + rank_weight + rank_price + (amazon_star_number-550)*rank_review + math.log(amazon_days+2)*10 - math.log(amazon_ranknum+2)*10 + amazon_picture_number
 
+    print("删除文件")
+    time_mark()
+
     #   删除文件
-    if tb_info and len(tb_info) > 0:
-        try:
-            os.remove(asin_info[9].replace("/", os.sep))
-        except Exception as e:
+    try:
+        os.remove(amazon_image_path.replace("/", os.sep))
+        os.remove(amazon_image_path_temp.replace("/", os.sep))
+    except Exception as e:
             print(e)
+
+    print("删除完成")
+    time_mark()
 
     print("rank value")
     print(output_rank)
+    time_mark()
     return output_rank
 
 if __name__ == '__main__':
-    ranking('B000X12IZQ',88, '蒸汽熨斗')
+    ranking('B00HWMS21I',1, '男士电动剃须刀')
