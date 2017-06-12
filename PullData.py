@@ -11,7 +11,6 @@ from GenImage import *
 from GenDescription import *
 from GenWirelessDesc import *
 
-
 # 2 ----------------常量定义
 # 汇率(API)
 exchange_rate = 15
@@ -20,13 +19,13 @@ profit_rate = 0.3
 # 包装重量(克)
 packet_weight = 150
 # 产地后缀
-title_append = u'日本制造'
+title_append = u''
 # 描述头
 description_start = 'xxx'
 # 描述尾
 description_end = 'yyy'
 # 模拟浏览器登录
-values = {'email': 'wyjxjm@126.com', 'password': '324712', 'submit': 'Login'}
+values = {'email': 'amazonjpysht9@sina.com', 'password': '1qaz2wsx@99', 'submit': 'Login'}
 postdata = urllib.parse.urlencode(values).encode()
 user_agent = r'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 ' \
              r'Safari/537.36'
@@ -43,14 +42,40 @@ reg_replace = re.compile('\n|\'|[|]|【|】')
 
 
 # 3 ----------------数据获取
+def ems_fee1(weight):
+        if weight <= 500:
+            ems_price = 1400
+        elif weight < 1000:
+            ems_price = 1400 + int((weight - 500) / 100) * 140
+        elif weight == 1000:
+            ems_price = 2100
+        elif weight < 2000:
+            ems_price = 2100 + int((weight - 1000) / 250) * 300
+        elif weight == 2000:
+            ems_price = 3300
+        elif weight < 6000:
+            ems_price = 3300 + int((weight - 2000) / 500) * 500
+        elif weight == 6000:
+            ems_price = 7300
+        elif weight < 30000:
+            ems_price = 7300 + int((weight - 6000) / 1000) * 800
+        elif weight == 30000:
+            ems_price = 26500
+        else:
+            ems_price = 2650000
+        return ems_price
+
 def pullData(html_url):
+    global ems
+
     # 提取网页内容
     try:
         request = urllib.request.Request(html_url, postdata, headers)
         html_file = opener.open(request)
     except:
-        print('open html failed **************************')
+        print('open html failed ')
     else:
+        # 正常处理模块
         print(u'打印获取数据: ')
 
         # 商品总信息列表
@@ -67,10 +92,17 @@ def pullData(html_url):
         title = ''
         title_node = bs_obj.find('', {'id': 'productTitle'})
         if title_node and len(title_node) > 0:
-            title = translate(title_node.get_text().strip().replace('\'', ''))
+            title = title_node.get_text().strip().replace('\'', '')
             title = title_append + title
-        product_info_list.append(title)
-        println(u'title--宝贝名称: %s' % title)
+
+        try:
+            c_title = translate1(title)
+        except:
+            product_info_list.append(title)
+            println(u'title--宝贝名称: %s' % title)
+        else:
+            product_info_list.append(c_title)
+            println(u'title--宝贝名称: %s' % c_title)
 
         # 3.2 宝贝类目
         cid = 50018961
@@ -122,40 +154,58 @@ def pullData(html_url):
         # 商品详细
         detail_label_list = []
         detail_value_list = []
+        weight_temp = ''
+        type_temp = ''
+        asin_temp = ''
+        startday_temp = ''
+
         detail_node = bs_obj.find('', {'id': 'prodDetails'})
         detail_bullets_node = bs_obj.find('', {'id': 'detail_bullets_id'})
         if detail_node and len(detail_node) > 0:
             for label_text in detail_node.find_all('td', {'class': 'label'}):
                 if label_text != '\n':
-                    label = translate(label_text.get_text().strip().replace('\n', ''))
+                    label = label_text.get_text().strip().replace('\n', '')
                     detail_label_list.append(label)
             for value_text in detail_node.find_all('td', {'class': 'value'}):
                 if value_text != '\n':
-                    value = translate(value_text.get_text().strip().replace('\n', ''))
+                    value = value_text.get_text().strip().replace('\n', '')
                     detail_value_list.append(value)
-        elif detail_bullets_node and len(detail_bullets_node) >0:
+            # 获取重要信息
+            # 重量信息
+            for i in range(len(detail_label_list)):
+                if re.search(r".*重量.*", detail_label_list[i]) != None:
+                    weight_temp = detail_value_list[i]
+                if re.search(r".*型番.*", detail_label_list[i]) != None:
+                    type_temp = detail_value_list[i]
+                if re.search(r".*ASIN.*", detail_label_list[i]) != None:
+                    asin_temp = detail_value_list[i]
+                if re.search(r".*開始日.*", detail_label_list[i]) != None:
+                    startday_temp = detail_value_list[i]
+        elif detail_bullets_node and len(detail_bullets_node) > 0:
+            for item in detail_bullets_node.find_all('li'):
+                item_text = item.get_text().strip().replace('\n', '')
+                if re.search(r".*重量.*", item_text) != None:
+                    weight_temp = re.sub(r".*:", "", item_text).strip()
+                if re.search(r".*型番.*", item_text) != None:
+                    type_temp = re.sub(r".*型番.", "", item_text).strip()
+                if re.search(r".*ASIN.*", item_text) != None:
+                    asin_temp = re.sub(r".*:", "", item_text).strip()
+                if re.search(r".*開始日.*", item_text) != None:
+                    startday_temp = re.sub(r".*:", "", item_text).strip()
 
-            print(u'detail_dict--商品详细: ')
-            print(detail_label_list)
-            println(detail_value_list)
+        print("提取属性成功")
 
-        # 价格计算
-        weight_temp = str('1000000克')
-        for i in range(len(detail_label_list)):
-            if re.search(r".*重量.*", detail_label_list[i]) != None:
-                weight_temp = detail_value_list[i]
-                break
-        if re.search(r".*公斤.*", weight_temp) != None:
-            weight = int(1000*float((weight_temp.replace(u'公斤', '').strip())))
-        elif re.search(r".*克.*", weight_temp) != None:
-            weight = int(weight_temp.replace(u'克', '').strip())
+        # 获取价格
+        if re.search(r".*Kg.*", weight_temp) != None:
+            weight_factor = 1000
         else:
-            weight = 1000000
-        if (weight + packet_weight) < 500:
-            ems = 100
-        else:
-            ems = 100 + ((weight + packet_weight - 500) / 100) * 10
-        price = round(((src_price + ship_price) / exchange_rate + (ems)) * (1 + profit_rate))
+            weight_factor = 1
+
+        packet_total_weight = int(float(weight_temp.replace(u'K', '').replace(u'g', '').strip()) * weight_factor) + packet_weight
+        ems = ems_fee1(packet_total_weight)
+        price = round(((src_price + ship_price + ems) / exchange_rate) * (1 + profit_rate))
+
+        # 4
         product_info_list.append(price)
         println(u'price--宝贝价格: %s' % price)
 
@@ -169,10 +219,16 @@ def pullData(html_url):
         num_node = bs_obj.find('', {'id': 'availability'})
         if num_node and len(num_node) > 0:
             num_text = num_node.get_text().replace('\n', '').strip()
-            if (re.search(r".*在庫あり.*",num_text) != None):
-                num = 50
-            elif (re.search(r".*残り.*",num_text) != None):
+            if (re.search(r".*在庫あり.*", num_text) != None):
+                num = 20
+            elif (re.search(r".*日以内に発送.*", num_text) != None):
                 num = 5
+            elif (re.search(r".*週間以内に発送.*", num_text) != None):
+                num = 0
+            elif (re.search(r".*か月以内に発送.*", num_text) != None):
+                num = 0
+            else:
+                num = 0
         product_info_list.append(num)
         println(u'num--宝贝数量: %s' % num)
 
@@ -231,7 +287,7 @@ def pullData(html_url):
         brand = ''
         brand_node = bs_obj.find('', {'id': 'brand'})
         if brand_node and len(brand_node) > 0:
-            brand = translate(brand_node.get_text().strip().replace('\'', ''))
+            brand = brand_node.get_text().strip().replace('\'', '')
         println(u'brand--品牌: %s' % brand)
 
         # 产品特点
@@ -240,7 +296,7 @@ def pullData(html_url):
         if feature_node and len(feature_node) > 0:
             for feature_text in feature_node.find_all('span', {'class': 'a-list-item'}):
                 if feature_text != '\n':
-                    feature = translate(reg_replace.sub('', feature_text.get_text().strip()))
+                    feature = reg_replace.sub('', feature_text.get_text().strip())
                     feature_list.append(feature)
         print(u'feature_list--产品特点: ')
         println(feature_list)
@@ -261,12 +317,11 @@ def pullData(html_url):
         pd_node = bs_obj.find('div', id=re.compile(".*descriptionAndDetails.*"))
         if pd_node and len(pd_node) > 0:
             image_head_deleted_content_product = delete_img_head_reg.sub('', pd_node.prettify())
-            html_head_deleted_content_product = delete_html_head_reg.sub('', image_head_deleted_content_product).\
-                replace(' ', '').strip('\n')
+            html_head_deleted_content_product = delete_html_head_reg.sub('', image_head_deleted_content_product).replace(' ', '').strip('\n')
             pd_list_temp = delete_n_reg.split(html_head_deleted_content_product)
             for pd_item in pd_list_temp:
                 if re.search('http', pd_item) == None:
-                    pd_temp = reg_replace.sub('', translate(pd_item))
+                    pd_temp = reg_replace.sub('', pd_item)
                 else:
                     pd_temp = re.search(r"http.*(jpg|png)", pd_item).group(0)
                 pd_list.append(pd_temp)
@@ -278,12 +333,11 @@ def pullData(html_url):
         aplus_node = bs_obj.find('div', id=re.compile(".*aplus_feature_div.*"))
         if aplus_node and len(aplus_node) > 0:
             image_head_deleted_content = delete_img_head_reg.sub('', aplus_node.prettify())
-            html_head_deleted_content = delete_html_head_reg.sub('', image_head_deleted_content).replace(' ', '').\
-                strip('\n')
+            html_head_deleted_content = delete_html_head_reg.sub('', image_head_deleted_content).replace(' ', '').strip('\n')
             aplus_list_temp = delete_n_reg.split(html_head_deleted_content)
             for aplus_item in aplus_list_temp:
                 if re.search('http', aplus_item) == None:
-                    aplus_temp = reg_replace.sub('', translate(aplus_item))
+                    aplus_temp = reg_replace.sub('', aplus_item)
                 else:
                     aplus_temp = re.search(r"http.*(jpg|png)", aplus_item).group(0)
                 aplus_list.append(aplus_temp)
@@ -294,12 +348,11 @@ def pullData(html_url):
         question_list = []
         question_node = bs_obj.find('', id=re.compile(".*ask-btf_feature_div.*"))
         if question_node and len(question_node) > 0:
-            html_head_deleted_content_question = delete_html_head_reg.sub('', question_node.prettify()).\
-                replace(' ','').strip('\n')
+            html_head_deleted_content_question = delete_html_head_reg.sub('', question_node.prettify()).replace(' ','').strip('\n')
             question_list_temp = delete_n_reg.split(html_head_deleted_content_question)
             for question_item in question_list_temp:
                 if re.search('http', question_item) == None:
-                    question_temp = reg_replace.sub('', translate(question_item))
+                    question_temp = reg_replace.sub('', question_item)
                 else:
                     question_temp = re.search(r"http.*(jpg|png)", question_item).group(0)
                 question_list.append(question_temp)
@@ -311,15 +364,12 @@ def pullData(html_url):
         comment_node = bs_obj.find('', id=re.compile(".*customer-reviews_feature_div.*"))
         if comment_node and len(comment_node) > 0:
             image_head_deleted_content_comment = delete_img_head_reg.sub('', comment_node.prettify())
-            html_head_deleted_content_comment = delete_html_head_reg.sub('', image_head_deleted_content_comment).\
-                replace(' ', '').strip('\n')
+            html_head_deleted_content_comment = delete_html_head_reg.sub('', image_head_deleted_content_comment).replace(' ', '').strip('\n')
             comment_list_temp = delete_n_reg.split(html_head_deleted_content_comment)
             for comment_item in comment_list_temp:
-                if re.search('http', comment_item) == None:
-                    comment_temp = reg_replace.sub('', translate(comment_item))
-                else:
+               if re.search('http', comment_item):
                     comment_temp = re.search(r"http.*(jpg|png)", comment_item).group(0)
-                comment_list.append(comment_temp)
+                    comment_list.append(comment_temp)
         print(u'comment_image_list--客户图片评论: ')
         println(comment_list)
 
@@ -330,7 +380,7 @@ def pullData(html_url):
         println(description)
 
         # 新图片下载与路径写入csv*************************************
-        asin_number = bs_obj.find('', {'name': 'ASIN'})['value']
+        asin_number = asin_temp
         thread = threading.Thread(target=genImage, name=str(asin_number), args=(image_list, str(asin_number)))
         thread.setDaemon(True)
         thread.start()
@@ -407,7 +457,7 @@ def pullData(html_url):
         # println(u'inputValues--用户输入名-值对: %s' % inputValues)
 
         # 3.34 商家编码
-        outer_id = detail_value_list[detail_label_list.index(u'ASIN')]
+        outer_id = asin_temp
         product_info_list.append(outer_id)
         println(u'outer_id--商家编码: %s' % outer_id)
 
@@ -492,7 +542,7 @@ def pullData(html_url):
         # println(u'item_size--物流体积: %s' % item_size)
 
         # 3.51 物流重量
-        item_weight = str(round(((weight + packet_weight) / 1000), 1))
+        item_weight = str(round(((packet_total_weight) / 1000), 1))
         product_info_list.append(item_weight)
         println(u'item_weight--物流重量: %s' % item_weight)
 
@@ -509,7 +559,7 @@ def pullData(html_url):
         # 3.54 无线详情
         wireless_desc = genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, comment_list)
         product_info_list.append(wireless_desc)
-        print(u'wireless_desc--无限详情: ')
+        print(u'wireless_desc--无线详情: ')
         println(wireless_desc)
 
         # 3.55 商品条形码

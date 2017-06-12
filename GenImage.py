@@ -4,10 +4,11 @@
 # 1 ----------------模块导入
 import os
 import urllib.request
+from GenLocalImage import auto_down
 
 
 # 2 ----------------常量定义
-dir_path = 'Item_images'
+dir_path = 'Items'
 start_name = dir_path+'/805567564a7cbdc'
 format = '.tbi'
 
@@ -23,8 +24,7 @@ def genImage(imageLink_list, asin_number):
             name = start_name + asin_number + str(i) + format
 
         if not os.path.exists(name):
-            urllib.request.urlretrieve(link, name)
-
+            auto_down(link, name)
         i += 1
 
 # 2.3 ----------------方法测试

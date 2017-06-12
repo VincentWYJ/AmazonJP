@@ -1,21 +1,31 @@
 # -*- coding: utf-8 -*-
-
-
 # 1 ----------------模块导入
 import os
 import sys
 from  PIL import Image
 import urllib.request
+import urllib.error
 from Utils import *
-
+import socket
+socket.setdefaulttimeout(10)
 
 # 2 ----------------常量定义
 sys_path = sys.path[0]
 dir_temp_path = sys.path[0] + '/Temp_images/'
-dir_path = sys.path[0] + '/Item_images/'
+dir_path = sys.path[0] + '/Items/'
 image_format_left = u'._SL'
 image_format_right= u'_'
 change_imagesize_reg = re.compile("\._.*_")
+
+def auto_down(url,filename):
+    try:
+        urllib.request.urlretrieve(url,filename)
+    except urllib.error.ContentTooShortError:
+        print("Network conditions is not good.Reloading.")
+        auto_down(url,filename)
+    except Exception as e :
+        print("other errors")
+        print(e)
 
 
 # 3 ----------------生成tbi格式图片
@@ -35,21 +45,19 @@ def genLocalImage(imageLink, image_format):
     if '"' in formated_imageLink:
         formated_imageLink = formated_imageLink[0, formated_imageLink.find('"')] + "'"
 
-    if not os.path.exists(return_name):
-        try:
-            urllib.request.urlretrieve(formated_imageLink, return_name_temp)
-        except:
-            urllib.request.urlretrieve(imageLink, return_name_temp)
+    auto_down(formated_imageLink, return_name_temp)
 
-        try:
-            imageopened = Image.open(return_name_temp)
-            x,y = imageopened.size
-            x_s = image_format
-            y_s = int((y / x) * image_format)
-            imagesaved = imageopened.resize((x_s, y_s))
-            imagesaved.save(return_name)
-        except:
-            println(u'图片处理模块文件错误')
+    im = Image.open(return_name_temp)
+    ori_w, ori_h = im.size
+    if (ori_w and ori_w < image_format):
+        source_box = (0, 0, int(ori_w), int(ori_h))
+        source_region = im.crop(source_box)
+        x_shift = int(image_format / 2) - int(ori_w / 2)
+        y_shift = 0
+        taget_box = (x_shift, y_shift, (ori_w + x_shift), (ori_h + y_shift))
+        new_image = Image.new('RGB', (image_format, ori_h), (255, 255, 255))
+        new_image.paste(source_region, taget_box)
+        new_image.save(return_name, "JPEG", quality=95)
 
     return return_name
 

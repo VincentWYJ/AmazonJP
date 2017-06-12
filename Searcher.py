@@ -91,16 +91,8 @@ def searcher(html_url):
                             print(category_link)
 
 
-
-                else: # else without children
-
-
         else:
-
-
-
-
-        category_node = bs_obj.find('', {'id': 'zg_browseRoot'})
+            category_node = bs_obj.find('', {'id': 'zg_browseRoot'})
         if category_node and len(category_node) > 0:
             for category_item in category_node.find_all('a'):
                 if category_item != '\n':

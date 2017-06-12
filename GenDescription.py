@@ -4,7 +4,6 @@
 # 1 ----------------导入模块
 from GenLocalImage import *
 
-
 # 2 ----------------常量定义
 image_begin = sys.path[0] + '/Static_images/image_start.jpg'
 image_end = sys.path[0]+ '/Static_images/image_end.jpg'
@@ -39,9 +38,14 @@ def genDescription(feature_list, image_list, pd_list, aplus_list, comment_list):
         description += addEnter('商品特点：')
         description += addEnter(ul_begin)
         for feature in feature_list:
-            if u'请输入型号验证' not in feature:
+            if u'モデル番号を入力してくださいこれが適合するか確認：' not in feature:
                 description += li_begin
-                description += feature
+                try:
+                    c_feature =translate1(feature)
+                except:
+                    description += feature
+                else:
+                    description += c_feature
                 description += addEnter(li_end)
         description += addEnter(ul_end)
 
@@ -57,7 +61,7 @@ def genDescription(feature_list, image_list, pd_list, aplus_list, comment_list):
     # 商品图片描述1
     if pd_list and len(pd_list) > 0:
         description += addEnter(br)
-        description += addEnter('商家图片1：')
+        description += addEnter('详细描述：')
         for image in pd_list:
             if 'http' in image:
                 description += addEnter(br)
@@ -67,7 +71,7 @@ def genDescription(feature_list, image_list, pd_list, aplus_list, comment_list):
     # 商品图片描述2
     if aplus_list and len(aplus_list) > 0:
         description += addEnter(br)
-        description += addEnter('商家图片2：')
+        description += addEnter('附加描述：')
         for image in aplus_list:
             if 'http' in image:
                 description += addEnter(br)

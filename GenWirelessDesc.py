@@ -4,10 +4,9 @@
 # 1 ----------------导入模块
 from GenLocalImage import *
 
-
 # 2 ----------------常量定义
-image_begin = sys.path[0] + '/Static_images/image_start.jpg'
-image_end = sys.path[0]+ '/Static_images/image_end.jpg'
+image_begin = sys.path[0] + '/Static_images/image_start_w.jpg'
+image_end = sys.path[0]+ '/Static_images/image_end_w.jpg'
 wap_begin = '<wapDesc>'
 wap_end = '</wapDesc>'
 short = '<shortDesc>short_content</shortDesc>'
@@ -37,8 +36,14 @@ def genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, commen
     # 商品特点
     if feature_list and len(feature_list) > 0:
         for feature in feature_list:
-            if u'请输入型号验证' not in feature:
-                description += addEnter(txt.replace(txt_reg, feature))
+            if u'モデル番号を入力してくださいこれが適合するか確認：' not in feature:
+                try:
+                    c_feature =translate1(feature)
+                except:
+                    description += addEnter(txt.replace(txt_reg, feature))
+                else:
+                    description += addEnter(txt.replace(txt_reg, c_feature))
+
 
     # 商品图片
     if image_list and len(image_list) > 0:
@@ -53,7 +58,12 @@ def genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, commen
                 local_image = genLocalImage(content, 600)
                 description += addEnter(img.replace(img_reg, local_image))
             else:
-                description += addEnter(txt.replace(txt_reg, str(content)))
+                try:
+                    c_content = translate1(content)
+                except:
+                    description += addEnter(txt.replace(txt_reg, content))
+                else:
+                    description += addEnter(txt.replace(txt_reg, c_content))
 
     # 商品描述2
     if aplus_list and len(aplus_list) > 0:
@@ -62,7 +72,12 @@ def genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, commen
                 local_image = genLocalImage(content, 600)
                 description += addEnter(img.replace(img_reg, local_image))
             else:
-                description += addEnter(txt.replace(txt_reg, content))
+                try:
+                    c_content = translate1(content)
+                except:
+                    description += addEnter(txt.replace(txt_reg, content))
+                else:
+                    description += addEnter(txt.replace(txt_reg, c_content))
 
     # 评论
     if comment_list and len(comment_list) > 0:
@@ -71,7 +86,12 @@ def genWirelessDesc(title, feature_list, image_list, pd_list, aplus_list, commen
                 local_image = genLocalImage(content, 600)
                 description += addEnter(img.replace(img_reg, local_image))
             else:
-                description += addEnter(txt.replace(txt_reg, content))
+                try:
+                    c_content = translate1(content)
+                except:
+                    description += addEnter(txt.replace(txt_reg, content))
+                else:
+                    description += addEnter(txt.replace(txt_reg, c_content))
 
     # 商家末尾图片
     description += addEnter(img.replace(img_reg, image_end))
