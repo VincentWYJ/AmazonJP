@@ -9,13 +9,9 @@ import hashlib
 import urllib
 import random
 import json
-import Levenshtein
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
-import os
+# import Levenshtein
+from PIL import Image
 import time
-
-appid = '20170525000049178'
-secretKey = 'CJ3amNC3iyx4pR3AnmZs'
 
 
 js = Py4Js()
@@ -62,6 +58,7 @@ def translate(q):
     sign = appid + q + str(salt) + secretKey
     sign = hashlib.md5(sign.encode()).hexdigest()
     myurl = myurl + '?appid=' + appid + '&q=' + urllib.parse.quote(q) + '&from=' + fromLang + '&to=' + toLang + '&salt=' + str(salt) + '&sign=' + sign
+    tranlate_result = ''
     try:
         # response是HTTPResponse对象
         resultPage = urllib.request.urlopen(myurl)
@@ -69,8 +66,8 @@ def translate(q):
         jsdata = json.loads(resultJason)  # 将json格式的结果转换成Python的字典结构
         tranlate_result = str(jsdata["trans_result"][0]["dst"])  # 取得翻译后的文本结果
     except Exception as e:
-        print
-        e
+        print(e)
+
     return tranlate_result
 
 # 2.1 方法测试
@@ -196,9 +193,9 @@ def compare_image(image_path1,image_path2,size = (220,220)):
     ratio = sum(data) / len(g)
     return ratio
 
-def compare_str(str1, str2):
-    similar_index = Levenshtein.jaro(str1, str2)
-    return similar_index
+# def compare_str(str1, str2):
+#     similar_index = Levenshtein.jaro(str1, str2)
+#     return similar_index
 
 def time_mark():
     print(time.strftime("%Y-%m-%d %H:%M:%S"))
