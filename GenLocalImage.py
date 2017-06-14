@@ -3,6 +3,8 @@
 import os
 import sys
 from  PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import urllib.request
 import urllib.error
 from Utils import *
@@ -26,6 +28,9 @@ def auto_down(url,filename):
     except Exception as e :
         print("other errors")
         print(e)
+        return 0
+    else:
+        return 1
 
 
 # 3 ----------------生成tbi格式图片
@@ -45,19 +50,23 @@ def genLocalImage(imageLink, image_format):
     if '"' in formated_imageLink:
         formated_imageLink = formated_imageLink[0, formated_imageLink.find('"')] + "'"
 
-    auto_down(formated_imageLink, return_name_temp)
+    if auto_down(formated_imageLink, return_name_temp) == 0:
+        auto_down(imageLink, return_name_temp)
 
-    im = Image.open(return_name_temp)
-    ori_w, ori_h = im.size
-    if (ori_w and ori_w < image_format):
-        source_box = (0, 0, int(ori_w), int(ori_h))
-        source_region = im.crop(source_box)
-        x_shift = int(image_format / 2) - int(ori_w / 2)
-        y_shift = 0
-        taget_box = (x_shift, y_shift, (ori_w + x_shift), (ori_h + y_shift))
-        new_image = Image.new('RGB', (image_format, ori_h), (255, 255, 255))
-        new_image.paste(source_region, taget_box)
-        new_image.save(return_name, "JPEG", quality=95)
+
+    try:
+        im = Image.open(return_name_temp)
+        ori_w, ori_h = im.size
+    except Exception as e:
+        print(e)
+    else:
+        if (ori_w and ori_w < image_format):
+            x_shift = int(image_format / 2) - int(ori_w / 2)
+            y_shift = 0
+            taget_box = (x_shift, y_shift, (ori_w + x_shift), (ori_h + y_shift))
+            new_image = Image.new('RGB', (image_format, ori_h+10), (255, 255, 255))
+            new_image.paste(im, taget_box)
+            new_image.save(return_name, "JPEG", quality=95)
 
     return return_name
 
