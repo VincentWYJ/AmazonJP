@@ -198,10 +198,36 @@ def pullData(html_url):
         # 获取价格
         if re.search(r".*Kg.*", weight_temp) != None:
             weight_factor = 1000
-        else:
+            try:
+                packet_total_weight = int(float(weight_temp.replace(u'Kg', '').strip()) *weight_factor) + packet_weight
+            except:
+                packet_total_weight = 10000
+        elif re.search(r".*kg.*", weight_temp) != None:
+            weight_factor = 1000
+            try:
+                packet_total_weight = int(float(weight_temp.replace(u'kg', '').strip()) *weight_factor) + packet_weight
+            except:
+                packet_total_weight = 10000
+        elif re.search(r".*キロ.*", weight_temp) != None:
+            weight_factor = 1000
+            try:
+                packet_total_weight = int(float(weight_temp.replace(u'キロ', '').strip()) *weight_factor) + packet_weight
+            except:
+                packet_total_weight = 10000
+        elif re.search(r".*g.*", weight_temp) != None:
             weight_factor = 1
-
-        packet_total_weight = int(float(weight_temp.replace(u'K', '').replace(u'g', '').strip()) * weight_factor) + packet_weight
+            try:
+                packet_total_weight = int(float(weight_temp.replace(u'g', '').strip()) *weight_factor) + packet_weight
+            except:
+                packet_total_weight = 10000
+        elif re.search(r".*グラム.*", weight_temp) != None:
+            weight_factor = 1
+            try:
+                packet_total_weight = int(float(weight_temp.replace(u'グラム', '').strip()) *weight_factor) + packet_weight
+            except:
+                packet_total_weight = 10000
+        else:
+            packet_total_weight = 10000
         ems = ems_fee1(packet_total_weight)
         price = round(((src_price + ship_price + ems) / exchange_rate) * (1 + profit_rate))
 
