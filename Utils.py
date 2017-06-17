@@ -9,7 +9,7 @@ import hashlib
 import urllib
 import random
 import json
-# import Levenshtein
+import Levenshtein
 from PIL import Image
 import time
 
@@ -193,9 +193,9 @@ def compare_image(image_path1,image_path2,size = (220,220)):
     ratio = sum(data) / len(g)
     return ratio
 
-# def compare_str(str1, str2):
-#     similar_index = Levenshtein.jaro(str1, str2)
-#     return similar_index
+def compare_str(str1, str2):
+    similar_index = Levenshtein.jaro(str1, str2)
+    return similar_index
 
 def time_mark():
     print(time.strftime("%Y-%m-%d %H:%M:%S"))

@@ -15,6 +15,7 @@ import re
 from Utils import *
 import operator
 import math
+import xlrd
 
 
 # 2 ----------------常量定义
@@ -24,6 +25,7 @@ exchange_rate = 16.24
 profit_rate = 0
 # 包装重量(克)
 packet_weight = 150
+dir_temp_path = sys.path[0] + '/Temp_images/'
 
 # 模拟浏览器登录
 values = {'email': 'wyjxjm@126.com', 'password': '324712', 'submit': 'Login'}
@@ -167,14 +169,40 @@ def pull_amazon_Data(asin,amazon_image_path):
     print("提取属性成功")
     time_mark()
 
-
-# 获取价格
+    # 获取价格
     if re.search(r".*Kg.*", weight_temp) != None:
-        weight_factor =1000
-    else:
+        weight_factor = 1000
+        try:
+            packet_total_weight = int(float(weight_temp.replace(u'Kg', '').strip()) * weight_factor) + packet_weight
+        except:
+            packet_total_weight = 10000
+    elif re.search(r".*kg.*", weight_temp) != None:
+        weight_factor = 1000
+        try:
+            packet_total_weight = int(float(weight_temp.replace(u'kg', '').strip()) * weight_factor) + packet_weight
+        except:
+            packet_total_weight = 10000
+    elif re.search(r".*キロ.*", weight_temp) != None:
+        weight_factor = 1000
+        try:
+            packet_total_weight = int(float(weight_temp.replace(u'キロ', '').strip()) * weight_factor) + packet_weight
+        except:
+            packet_total_weight = 10000
+    elif re.search(r".*g.*", weight_temp) != None:
         weight_factor = 1
+        try:
+            packet_total_weight = int(float(weight_temp.replace(u'g', '').strip()) * weight_factor) + packet_weight
+        except:
+            packet_total_weight = 10000
+    elif re.search(r".*グラム.*", weight_temp) != None:
+        weight_factor = 1
+        try:
+            packet_total_weight = int(float(weight_temp.replace(u'グラム', '').strip()) * weight_factor) + packet_weight
+        except:
+            packet_total_weight = 10000
+    else:
+        packet_total_weight = 10000
 
-    packet_total_weight = int(float(weight_temp.replace(u'K','').replace(u'g','').strip()) * weight_factor)+ packet_weight
     ems = ems_fee(packet_total_weight)
     price = round(((src_price + ship_price + ems) / exchange_rate) * (1 + profit_rate))
 
@@ -379,7 +407,7 @@ def ranking(asin,ranknumber,category):
     time_mark()
 
 
-    tb_info = pull_taobao_data(amazon_image_path.replace("/",os.sep))
+    tb_info = pull_taobao_data(amazon_image_path_temp.replace("/",os.sep))
     time.sleep(5)
 
 
@@ -390,7 +418,8 @@ def ranking(asin,ranknumber,category):
     time_mark()
 
     amazon_title = str(asin_info[0])
-    amazon_title_2nd = "日本直邮"+ str(asin_info[7]) + category
+    #amazon_title_2nd = "日本直邮"+ str(asin_info[7]) + category
+    amazon_title_2nd = "日本直邮" + str(asin_info[7])
     amazon_star_number = int(re.sub("\D", "", asin_info[1]))
     amazon_revi_number = int(re.sub("\D", "", asin_info[2]))
     amazon_price = int(asin_info[4])
@@ -533,4 +562,13 @@ def ranking(asin,ranknumber,category):
     return output_rank
 
 if __name__ == '__main__':
-    ranking('B00HWMS21I',1, '男士电动剃须刀')
+    rank_value = []
+    xlsx_file = xlrd.open_workbook('Htmls/Asins.xlsx')
+    table = xlsx_file.sheet_by_name('Asins')
+    html_list = table.col_values(0)
+    for item in html_list:
+        print(item)
+        value= ranking(item,1, '男士电动剃须刀')
+        print(value)
+        rank_value.append(value)
+    table.col_values(1).insert(rank_value)

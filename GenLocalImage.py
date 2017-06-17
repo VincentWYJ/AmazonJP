@@ -9,7 +9,7 @@ import urllib.request
 import urllib.error
 from Utils import *
 import socket
-socket.setdefaulttimeout(10)
+socket.setdefaulttimeout(15)
 
 # 2 ----------------常量定义
 sys_path = sys.path[0]
